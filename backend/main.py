@@ -312,7 +312,7 @@ def config_defaults():
 # Profile CRUD
 # ------------------------------------------------------------------ #
 @app.post("/api/profiles")
-def create_profile(body: dict):
+def create_profile(request: Request, body: dict):
     body = body or {}
     slug = (body.get("slug") or "").strip().lower()
     access_token = (body.get("access_token") or "").strip() or secrets.token_urlsafe(32)
