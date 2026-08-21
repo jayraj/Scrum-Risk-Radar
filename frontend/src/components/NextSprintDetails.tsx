@@ -5,6 +5,7 @@ import { useSnapshot } from '../hooks/useSnapshot'
 import {
   apiNextSprintIssues,
   apiNextSprintRisks,
+  SHOW_AI_DEBUG,
   type Blocker,
   type NextSprintIssue,
   type NextSprintProject,
@@ -246,7 +247,7 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
           <div className="empty-cell">✅ No early risks detected. Sprint is ready for planning.</div>
         )}
 
-        {aiPrompt !== null && (
+        {SHOW_AI_DEBUG && aiPrompt !== null && (
           <div className="ai-details-section">
             <details className="ai-details">
               <summary>🔍 View AI Prompt &amp; Raw Response</summary>

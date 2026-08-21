@@ -3,6 +3,9 @@ import { profileApi } from './config'
 
 export const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'http://127.0.0.1:5002' : '/api')
 
+/** Debug visibility for the "🔍 View AI Prompt & Raw Response" sections. Opt-in via VITE_SHOW_AI_DEBUG=true. */
+export const SHOW_AI_DEBUG = import.meta.env.VITE_SHOW_AI_DEBUG === 'true'
+
 /** Extracts the backend's error message from an axios error, with a fallback. */
 export const apiErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {

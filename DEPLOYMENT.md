@@ -95,6 +95,7 @@ Config notes:
 | Variable | Required | Value |
 |---|---|---|
 | `VITE_API_BASE` | ✅ | `https://<backend>.vercel.app` (project #1's URL, no trailing slash) |
+| `VITE_SHOW_AI_DEBUG` | – | `true` shows the "🔍 View AI Prompt & Raw Response" sections. Unset in prod (default hidden); local dev sets it in `.env.development` |
 
 > ⚠️ Without `VITE_API_BASE`, production builds fall back to same-origin `/api`
 > and every request 404s. See `API_BASE` in [`frontend/src/api/client.ts`](frontend/src/api/client.ts).

@@ -6,6 +6,7 @@ import {
   apiGenerateFollowup,
   apiGenerateMitigations,
   apiPostJiraComment,
+  SHOW_AI_DEBUG,
   type Blocker,
   type Mitigation,
 } from '../api/client'
@@ -379,23 +380,25 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
               </div>
             )}
 
-            <details className="prompt-details">
-              <summary>🔍 View AI Prompt &amp; Raw Response</summary>
-              {sprintMitigation.llm && (
-                <div className="ai-info-line">
-                  <span>🤖 LLM: {sprintMitigation.llm.provider} · {sprintMitigation.llm.model}</span>
-                  <span className={`ai-used ${sprintMitigation.ai_used ? 'yes' : 'no'}`}>
-                    {sprintMitigation.ai_used ? 'AI used' : 'Rule-based fallback'}
-                  </span>
+            {SHOW_AI_DEBUG && (
+              <details className="prompt-details">
+                <summary>🔍 View AI Prompt &amp; Raw Response</summary>
+                {sprintMitigation.llm && (
+                  <div className="ai-info-line">
+                    <span>🤖 LLM: {sprintMitigation.llm.provider} · {sprintMitigation.llm.model}</span>
+                    <span className={`ai-used ${sprintMitigation.ai_used ? 'yes' : 'no'}`}>
+                      {sprintMitigation.ai_used ? 'AI used' : 'Rule-based fallback'}
+                    </span>
+                  </div>
+                )}
+                <div className="prompt-block">
+                  <div className="prompt-label">Prompt sent to model:</div>
+                  <pre>{sprintMitigation.prompt}</pre>
+                  <div className="prompt-label">Model response:</div>
+                  <pre>{sprintMitigation.raw_response || '⚠️ AI unavailable — used fallback (see error).'}</pre>
                 </div>
-              )}
-              <div className="prompt-block">
-                <div className="prompt-label">Prompt sent to model:</div>
-                <pre>{sprintMitigation.prompt}</pre>
-                <div className="prompt-label">Model response:</div>
-                <pre>{sprintMitigation.raw_response || '⚠️ AI unavailable — used fallback (see error).'}</pre>
-              </div>
-            </details>
+              </details>
+            )}
           </div>
         )}
       </div>
