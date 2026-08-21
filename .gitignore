@@ -1,0 +1,19 @@
+# Python
+backend/venv/
+__pycache__/
+*.pyc
+backend/data/burndown_history.json
+backend/backend.log
+
+# Env / secrets
+.env
+.env.local
+*.env
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/dev.log
+
+# OS / editor
+.DS_Store
