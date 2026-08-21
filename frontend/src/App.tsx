@@ -66,9 +66,26 @@ export default function App() {
               path="/"
               element={
                 !activeProfile ? (
-                  <div className="no-data">
-                    <p>No profile configured yet.</p>
-                    <Link className="details-btn" to="/settings">⚙️ Go to Settings to create a profile</Link>
+                  <div className="empty-profile">
+                    <div className="empty-profile-icon">
+                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" />
+                        <circle cx="12" cy="12" r="6" />
+                        <circle cx="12" cy="12" r="2" />
+                      </svg>
+                    </div>
+                    <h2 className="empty-profile-title">No profile configured yet</h2>
+                    <p className="empty-profile-text">
+                      Connect your Jira Cloud account to start tracking sprint risks
+                      across current and future sprints.
+                    </p>
+                    <Link className="ai-scan-btn empty-profile-cta" to="/settings">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M5 12h14" />
+                        <path d="M12 5v14" />
+                      </svg>
+                      Create a Profile
+                    </Link>
                   </div>
                 ) : (
                   <DashboardHome syncIntervalSeconds={syncIntervalSeconds} refreshKey={refreshKey} />
