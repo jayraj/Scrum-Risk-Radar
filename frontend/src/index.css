@@ -1805,11 +1805,29 @@ body {
   }
 }
 
+@media (max-width: 560px) {
+  /* Icon-only brand keeps the strip on one line so the settings
+     button never crops on narrow phones. */
+  .strip-brand-name {
+    display: none;
+  }
+
+  .top-strip {
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .top-strip-actions {
+    gap: 8px;
+  }
+}
+
 .velocity-project {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 14px;
   margin-bottom: 0;
+  min-width: 0;
 }
 
 .velocity-project-header {
@@ -1828,6 +1846,15 @@ body {
 .bar-chart-wrap {
   height: 200px;
   position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Chart.js sets an inline pixel width on the canvas; cap it so stale
+   measurements from a wider viewport (e.g. after rotating the device)
+   can never overflow their card. */
+.bar-chart-wrap canvas {
+  max-width: 100%;
 }
 
 /* ------------------------------------------------------------------ */

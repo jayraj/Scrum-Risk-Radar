@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -26,6 +27,23 @@ interface VelocityTrendProps {
 export default function VelocityTrend({ velocity, syncIntervalSeconds = 300, refreshKey = 0 }: VelocityTrendProps) {
   const { snapshot } = useSnapshot(syncIntervalSeconds, refreshKey)
   const data = velocity ?? snapshot?.velocity ?? {}
+
+  // Some mobile browsers don't fire a resize after orientation change,
+  // leaving Chart.js canvases at their pre-rotation width.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>
+    const trigger = () => {
+      clearTimeout(timer)
+      // Re-dispatch once the new viewport dimensions have settled.
+      window.dispatchEvent(new Event('resize'))
+      timer = setTimeout(() => window.dispatchEvent(new Event('resize')), 250)
+    }
+    window.addEventListener('orientationchange', trigger)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('orientationchange', trigger)
+    }
+  }, [])
 
   const averageVelocity = (sprints: VelocitySprint[]) => {
     if (!sprints || sprints.length === 0) return 0
