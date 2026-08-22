@@ -1063,9 +1063,10 @@ body {
   align-self: center;
 }
 
-.risk-table.six-col .risk-table-header,
-.risk-table.six-col .risk-row {
-  grid-template-columns: minmax(160px, 2fr) minmax(100px, 1fr) 70px minmax(100px, 1fr) 48px 80px;
+/* Sprint Readiness table: Risk | Severity | Assignee | Status */
+.risk-table.four-col .risk-table-header,
+.risk-table.four-col .risk-row {
+  grid-template-columns: minmax(160px, 2fr) 70px minmax(100px, 1fr) 80px;
 }
 
 .risk-row-detect {

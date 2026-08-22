@@ -182,13 +182,11 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
               })}
             </div>
 
-            <div className="risk-table six-col">
+            <div className="risk-table four-col">
               <div className="risk-table-header">
                 <span>Risk</span>
-                <span>Category</span>
                 <span>Severity</span>
                 <span>Assignee</span>
-                <span>Stories</span>
                 <span>Status</span>
               </div>
               <div className="risk-table-rows">
@@ -214,14 +212,10 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
                             <span className="risk-row-summary">{summaryByKey.get(ticketKey) || ''}</span>
                           </span>
                         </div>
-                        <span className="risk-row-cat">{formatRiskType(risk.type)}</span>
                         <span className="risk-row-sev" style={{ color: severityColor(risk.severity) }}>
                           {severity}
                         </span>
                         <span className="risk-row-detect">{assignee}</span>
-                        <span className="risk-row-stories" style={{ color: severityColor(risk.severity) }}>
-                          1
-                        </span>
                         <span className="risk-row-status" style={{ color: status.color }}>
                           {status.label}
                         </span>
