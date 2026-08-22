@@ -18,6 +18,14 @@ export default function App() {
   const [syncing, setSyncing] = useState(false)
   const [syncIntervalSeconds] = useState(300)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [disclaimerDismissed, setDisclaimerDismissed] = useState(
+    () => localStorage.getItem('srr_disclaimer_dismissed') === '1'
+  )
+
+  const dismissDisclaimer = () => {
+    localStorage.setItem('srr_disclaimer_dismissed', '1')
+    setDisclaimerDismissed(true)
+  }
 
   useEffect(() => {
     const unsubscribe = subscribeLastSync((value) => {
@@ -58,6 +66,23 @@ export default function App() {
         profiles={profiles}
         activeProfile={activeProfile}
       />
+
+      {!disclaimerDismissed && (
+        <div className="disclaimer-banner" role="note">
+          <span>
+            ⚠️ MVP demo — sprint data (including assignee names &amp; issue text) is sent to third-party AI
+            (Gemini/OpenRouter) for analysis. Avoid connecting sensitive or production Jira workspaces.{' '}
+            <a href="/privacy.html" target="_blank" rel="noreferrer">Learn more →</a>
+          </span>
+          <button
+            className="disclaimer-dismiss"
+            onClick={dismissDisclaimer}
+            aria-label="Dismiss disclaimer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="app-body">
         <main className="app-main">

@@ -65,6 +65,11 @@
   --color-error: #ef4444;
   --color-info: #3b82f6;
 
+  /* amber ramp (warning tints for notices/banners) */
+  --color-warning-50: #fffbeb;
+  --color-warning-200: #fde68a;
+  --color-warning-700: #b45309;
+
   /* severity (anchored to semantics; HIGH = deepened warning) */
   --sev-critical: var(--color-error);
   --sev-high: #d97706;
@@ -144,6 +149,44 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+.disclaimer-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--color-warning-50);
+  border-bottom: 1px solid var(--color-warning-200);
+  color: #92400e;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.disclaimer-banner a {
+  color: var(--color-warning-700);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.disclaimer-banner a:hover {
+  color: #92400e;
+}
+
+.disclaimer-dismiss {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  opacity: 0.7;
+}
+
+.disclaimer-dismiss:hover {
+  opacity: 1;
 }
 
 .top-strip {
