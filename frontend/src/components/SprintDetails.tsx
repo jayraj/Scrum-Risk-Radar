@@ -43,11 +43,15 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
   const [draftGeneratedBy, setDraftGeneratedBy] = useState<Record<string, string>>({})
   const [activeTab, setActiveTab] = useState('ALL')
   const [expandedKey, setExpandedKey] = useState<string | null>(null)
+  // The AI mitigation plan stays hidden until the user explicitly asks for
+  // it — tracked per sprint so switching sprints hides it again.
+  const [planRequestedFor, setPlanRequestedFor] = useState<string | null>(null)
 
   const resolvedName = sprintName ?? (sprintKey ? decodeURIComponent(sprintKey) : '')
   const card = snapshot?.radar_data.find((r) => r.sprint_key === resolvedName) ?? null
   const sprintBlockers = resolvedName ? blockers.filter((b) => b.sprint_key === resolvedName) : []
   const sprintMitigation = mitigations.find((m) => m.sprint_key === resolvedName) || null
+  const planVisible = !!resolvedName && planRequestedFor === resolvedName
 
   const generateMitigations = async () => {
     if (!resolvedName) return
@@ -130,15 +134,25 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
               </span>
             )}
           </div>
-          <button className="ai-scan-btn" onClick={generateMitigations} disabled={generating}>
+          <button
+            className="ai-scan-btn"
+            onClick={() => {
+              setPlanRequestedFor(resolvedName)
+              generateMitigations()
+            }}
+            disabled={generating}
+          >
             <ShieldCheck size={16} />
-            {generating ? 'Generating...' : 'Mitigate with AI'}
+            {generating ? 'Generating...' : 'Mitigation Plan with AI'}
           </button>
         </div>
 
         {card && (
           <div className="sprint-detail-meta">
-            <span>{card.sprint_key}</span>
+            <span>
+              <span className="status-dot" style={{ backgroundColor: severityColor(card.severity) }} />{' '}
+              {card.sprint_key}
+            </span>
             {sprintDayLabel(card.start_date, card.end_date) && (
               <span>{sprintDayLabel(card.start_date, card.end_date)}</span>
             )}
@@ -150,7 +164,7 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
         {sprintBlockers.length === 0 ? (
           <div className="empty-cell">
             No risks found. The Sprint health looks good !!!
-            {sprintMitigation && ' Review the AI Summary below for the next Actions.'}
+            {planVisible && sprintMitigation && ' Review the AI Summary below for the next Actions.'}
           </div>
         ) : (
           <>
@@ -276,8 +290,13 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
           </>
         )}
 
-        {sprintMitigation && (
+        {planVisible && sprintMitigation && (
           <div className="mitigation-card">
+            {sprintMitigation.ai_used === false && (
+              <div className="ai-fallback-note">
+                ⚠️ Rule-based fallback — may be less relevant than AI-generated plans.
+              </div>
+            )}
             <h4 className="mitigation-title"><Bot size={20} className="title-icon" />AI MITIGATION PLAN</h4>
 
             {(sprintMitigation.risk_types ?? []).length > 0 && (
