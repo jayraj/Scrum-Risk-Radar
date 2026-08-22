@@ -22,7 +22,7 @@ export default function TopStrip({
   return (
     <header className="top-strip">
       <Link to="/" className="strip-brand" aria-label="Go to home">
-        <Radar size={22} className="strip-brand-icon" />
+        <Radar size={24} className="strip-brand-icon" />
         <span className="strip-brand-name">PORTFOLIO RISK RADAR</span>
       </Link>
 
@@ -30,7 +30,7 @@ export default function TopStrip({
         <span className="last-sync">Last sync: {lastSync}</span>
 
         <button onClick={onSyncNow} className="sync-btn" disabled={syncing || !activeProfile}>
-          <RefreshCw size={14} className={syncing ? 'spin' : ''} />
+          <RefreshCw size={16} className={syncing ? 'spin' : ''} />
           {syncing ? 'Syncing...' : 'Sync Now'}
         </button>
 

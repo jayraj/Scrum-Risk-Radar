@@ -139,7 +139,7 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
         <div className="panel-heading">
           <h2 className="component-title"><ClipboardList size={24} className="title-icon" />Sprint Readiness</h2>
           <button className="ai-scan-btn" onClick={analyzeRisks} disabled={analyzing}>
-            <RefreshCw size={11} />
+            <RefreshCw size={16} />
             {analyzing ? 'Analyzing...' : 'RUN AI SCAN'}
           </button>
         </div>
