@@ -2001,3 +2001,17 @@ body {
   font-size: 12px;
   color: var(--color-neutral-500);
 }
+
+.privacy-note {
+  margin-top: 18px;
+  padding: 10px 12px;
+  background: var(--color-warning-50);
+  border: 1px solid var(--color-warning-200);
+  border-radius: var(--radius-sm);
+  color: #92400e;
+}
+
+.privacy-note a {
+  color: var(--color-warning-700);
+  font-weight: 600;
+}

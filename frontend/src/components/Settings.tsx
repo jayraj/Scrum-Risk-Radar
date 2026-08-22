@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { PlugZap, Save, X } from 'lucide-react'
 import {
   apiConfigDefaults,
   apiCreateProfile,
@@ -325,15 +326,27 @@ export default function Settings({ onProfilesChanged, onSelectProfile }: Setting
           </label>
         </div>
 
+        <p className="token-note privacy-note">
+          ℹ️ Saving shares this workspace's sprint data (assignee names, issue summaries and descriptions) with your
+          chosen AI provider for analysis. Nothing is ever written back to Jira — follow-up messages are generated for
+          you to copy and paste manually. See the{' '}
+          <a href="/privacy.html" target="_blank" rel="noreferrer">privacy notice</a>.
+        </p>
+
         <div className="form-actions">
           <button className="generate-btn" onClick={testConnection} disabled={testing || saving}>
-            {testing ? 'Testing...' : '🔌 Test Connection'}
+            <PlugZap size={16} strokeWidth={2} />
+            {testing ? 'Testing...' : 'Test Connection'}
           </button>
           <button className="sync-btn" onClick={saveProfile} disabled={saving || testing}>
-            {saving ? 'Saving...' : editingSlug ? '💾 Update Profile' : '💾 Save Profile'}
+            <Save size={16} strokeWidth={2} />
+            {saving ? 'Saving...' : editingSlug ? 'Update Profile' : 'Save Profile'}
           </button>
           {editingSlug && (
-            <button className="delete-btn" onClick={cancelEdit}>Cancel</button>
+            <button className="delete-btn" onClick={cancelEdit}>
+              <X size={16} strokeWidth={2} />
+              Cancel
+            </button>
           )}
         </div>
 
