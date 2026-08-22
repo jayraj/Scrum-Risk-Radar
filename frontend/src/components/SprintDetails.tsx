@@ -14,7 +14,6 @@ import {
   riskDetected,
   riskStatusFor,
   riskTitle,
-  severityClass,
   severityColor,
   splitItems,
   sprintDayLabel,
@@ -110,7 +109,7 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
   return (
     <div className="sprint-details">
       <nav className="breadcrumb" aria-label="Breadcrumb">
-        <Link to="/">Home</Link>
+        <Link to="/">Dashboard</Link>
         <span className="breadcrumb-sep">/</span>
         {onBack ? (
           <button className="breadcrumb-link-btn" onClick={onBack}>ACTIVE SPRINT(S)</button>
@@ -121,45 +120,32 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
         <span className="breadcrumb-current">{resolvedName}</span>
       </nav>
 
-      {card && (
-        <div className={`sprint-details-header risk-card ${severityClass(card.severity)}`}>
-          <div className="risk-header">
-            <span className="issue-key">
-              <span
-                className="status-dot"
-                style={{ backgroundColor: severityColor(card.severity) }}
-              ></span>
-              {card.sprint_key}
-              {sprintDayLabel(card.start_date, card.end_date) && (
-                <span className="sprint-day">
-                  · {sprintDayLabel(card.start_date, card.end_date)}
-                </span>
-              )}
-            </span>
-            <span className="risk-score" style={{ backgroundColor: severityColor(card.severity) }}>
-              {card.risk_score}%
-            </span>
-          </div>
-
-          <div className="card-progress">
-            <span className="card-progress-label">
-              Progress {card.total_sp > 0 ? Math.round((card.completed_sp / card.total_sp) * 100) : 0}%
-            </span>
-            <span className="card-progress-pts">
-              {card.completed_sp} pt / {card.total_sp} pt
-            </span>
-          </div>
-        </div>
-      )}
-
       <div className="blockers-panel">
         <div className="panel-heading">
-          <h2 className="component-title"><ShieldAlert size={24} className="title-icon" />Blockers &amp; Impediments</h2>
+          <div className="panel-heading-left">
+            <h2 className="component-title"><ShieldAlert size={24} className="title-icon" />{resolvedName} Blockers &amp; Impediments</h2>
+            {card && (
+              <span className="risk-score" style={{ backgroundColor: severityColor(card.severity) }}>
+                {card.risk_score}%
+              </span>
+            )}
+          </div>
           <button className="ai-scan-btn" onClick={generateMitigations} disabled={generating}>
             <ShieldCheck size={16} />
             {generating ? 'Generating...' : 'Mitigate with AI'}
           </button>
         </div>
+
+        {card && (
+          <div className="sprint-detail-meta">
+            <span>{card.sprint_key}</span>
+            {sprintDayLabel(card.start_date, card.end_date) && (
+              <span>{sprintDayLabel(card.start_date, card.end_date)}</span>
+            )}
+            <span>Progress {card.total_sp > 0 ? Math.round((card.completed_sp / card.total_sp) * 100) : 0}%</span>
+            <span>{card.completed_sp} pt / {card.total_sp} pt</span>
+          </div>
+        )}
 
         {sprintBlockers.length === 0 ? (
           <div className="empty-cell">

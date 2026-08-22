@@ -94,7 +94,7 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
   return (
     <div className="sprint-details">
       <nav className="breadcrumb" aria-label="Breadcrumb">
-        <Link to="/">Home</Link>
+        <Link to="/">Dashboard</Link>
         <span className="breadcrumb-sep">/</span>
         {onBack ? (
           <button className="breadcrumb-link-btn" onClick={onBack}>FUTURE SPRINT(S)</button>
@@ -105,41 +105,28 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
         <span className="breadcrumb-current">{project.sprint_key}</span>
       </nav>
 
-      <div
-        className="sprint-details-header risk-card indigo"
-        style={{ borderLeftColor: getRiskColor(project.risk_score) }}
-      >
-        <div className="risk-header">
-          <span className="issue-key">{project.project_key}</span>
-          <span className="risk-score" style={{ backgroundColor: getRiskColor(project.risk_score) }}>
-            {project.risk_score !== undefined && project.risk_score !== null ? project.risk_score : 'N/A'}%
-          </span>
-        </div>
-
-        <div className="risk-body">
-          <p className="summary">
-            {project.sprint_key}
-            {project.start_date && project.end_date && (
-              <span className="sprint-dates">
-                {' '}· {formatDate(project.start_date)} → {formatDate(project.end_date)}
-              </span>
-            )}
-          </p>
-          <p className="risk-type">{project.issue_count} issue(s) planned</p>
-          <p className="sprint-meta">{project.total_sp} story points</p>
-        </div>
-
-      </div>
-
       <div className="blockers-panel">
         <div className="panel-heading">
-          <h2 className="component-title"><ClipboardList size={24} className="title-icon" />Sprint Readiness</h2>
+          <div className="panel-heading-left">
+            <h2 className="component-title"><ClipboardList size={24} className="title-icon" />{project.project_key} Sprint Readiness</h2>
+            <span className="risk-score" style={{ backgroundColor: getRiskColor(project.risk_score) }}>
+              {project.risk_score !== undefined && project.risk_score !== null ? project.risk_score : 'N/A'}%
+            </span>
+          </div>
           <button className="ai-scan-btn" onClick={analyzeRisks} disabled={analyzing}>
             <RefreshCw size={16} />
             {analyzing ? 'Analyzing...' : 'RUN AI SCAN'}
           </button>
         </div>
-        <p className="sprint-readiness-meta">Planned Stories : {project.issue_count}</p>
+        <div className="sprint-detail-meta">
+          {project.start_date && project.end_date ? (
+            <span>{project.sprint_key} · {formatDate(project.start_date)} → {formatDate(project.end_date)}</span>
+          ) : (
+            <span>{project.sprint_key}</span>
+          )}
+          <span>{project.issue_count} issue(s) planned</span>
+          <span>{project.total_sp} story points</span>
+        </div>
 
         {nextSprintRisks && nextSprintRisks.length > 0 && (() => {
             const categories = Array.from(new Set(nextSprintRisks.map((r) => r.type)))
