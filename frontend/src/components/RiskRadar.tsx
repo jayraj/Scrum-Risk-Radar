@@ -51,7 +51,7 @@ export default function RiskRadar({ syncIntervalSeconds, refreshKey = 0 }: RiskR
         <>
           {radarData.length > 0 && !hasRisks && (
             <div className="smooth-banner">
-              Hey there, Sprints are running smoothly. Please keep your eyes open for any risk that may incounter anytime.
+              Hey there, everything is on track with the current sprints. Please continue monitoring for potential risks, address them proactively, and ensure timely follow-up on any mitigation actions.
             </div>
           )}
           {radarData.length > 0 && hasRisks && (
