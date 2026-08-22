@@ -1,9 +1,12 @@
+// Severity palette anchored to the design-system semantic tokens:
+// CRITICAL = error (#ef4444), MEDIUM = warning (#f59e0b), LOW = success (#10b981).
+// HIGH uses a deepened warning (#d97706) to keep the four tiers distinguishable.
 export const getRiskColor = (score: number | undefined | null): string => {
-  if (score === undefined || score === null) return '#9ca3af'
-  if (score >= 80) return '#dc2626'
-  if (score >= 60) return '#ea8c00'
+  if (score === undefined || score === null) return '#a1a1aa'
+  if (score >= 80) return '#ef4444'
+  if (score >= 60) return '#d97706'
   if (score >= 35) return '#f59e0b'
-  return '#16a34a'
+  return '#10b981'
 }
 
 export interface RiskDetectFields {
@@ -56,13 +59,13 @@ export const riskDetected = (risk: RiskDetectFields): string => {
 export const severityColor = (severity?: string): string => {
   switch ((severity || '').toUpperCase()) {
     case 'CRITICAL':
-      return '#dc2626'
+      return '#ef4444'
     case 'HIGH':
-      return '#ea8c00'
+      return '#d97706'
     case 'MEDIUM':
       return '#f59e0b'
     default:
-      return '#16a34a'
+      return '#10b981'
   }
 }
 
