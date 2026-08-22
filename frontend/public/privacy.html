@@ -131,14 +131,23 @@
 
     <h2>5. Third-party AI caveat</h2>
     <div class="card">
-      <p>Even with pseudonymization, prompts may contain your organization's issue titles and text. Provider
-      retention/training policies differ by plan (e.g., Gemini free vs paid tier, OpenRouter routing).
-      Review your provider's data-use terms before enabling AI features on real workspaces.</p>
+      <p>Even with pseudonymization, prompts may contain your organization's issue titles and text.
+      Data handling differs significantly by provider and plan:</p>
+      <ul>
+        <li><strong>Gemini (free tier):</strong> Google may use submitted prompts to improve its products.
+          If that is unacceptable for your workspace, use a <strong>paid-tier Gemini API key</strong>, where
+          submitted data is not used for training.</li>
+        <li><strong>OpenRouter:</strong> requests are routed to third-party models with varying retention
+          and training policies. Prefer providers advertising a no-training / zero-data-retention policy,
+          which can be filtered in the OpenRouter dashboard.</li>
+        <li>In all cases, review your provider's current data-use terms before enabling AI features on
+          real workspaces — this app cannot override provider-side retention.</li>
+      </ul>
     </div>
 
     <h2>6. Contact</h2>
     <div class="card">
-      <p>Questions or deletion requests: <strong>[your-email@example.com]</strong></p>
+      <p>Questions or deletion requests: <strong><a href="mailto:jaybhatta@yahoo.com">jaybhatta@yahoo.com</a></strong></p>
     </div>
   </main>
 
