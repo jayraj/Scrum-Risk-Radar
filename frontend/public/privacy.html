@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Notice — Sprint Risk Radar</title>
+  <style>
+    :root {
+      --ink: #1e293b;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --accent: #2563eb;
+      --amber-bg: #fffbeb;
+      --amber-line: #fde68a;
+      --amber-text: #92400e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+    header {
+      background: #111827;
+      color: #f9fafb;
+      padding: 20px 24px;
+    }
+    header .wrap { max-width: 800px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+    header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+    main { max-width: 800px; margin: 0 auto; padding: 32px 24px 64px; }
+    h2 { font-size: 17px; font-weight: 700; margin: 28px 0 10px; letter-spacing: -0.01em; }
+    p, li { color: #334155; }
+    ul { padding-left: 22px; margin: 8px 0; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px 20px;
+      margin-top: 12px;
+    }
+    .notice {
+      background: var(--amber-bg);
+      border: 1px solid var(--amber-line);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin: 20px 0;
+      color: var(--amber-text);
+      font-size: 14px;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+    th { text-align: left; font-size: 13px; background: #f1f5f9; padding: 10px 14px; }
+    td { font-size: 14px; padding: 10px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+    code { background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-size: 13px; }
+    footer { max-width: 800px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-size: 13px; }
+    .back { color: #93c5fd; text-decoration: none; font-size: 14px; }
+    .back:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <span style="font-size:22px">🛡️</span>
+      <h1>Sprint Risk Radar — Privacy Notice</h1>
+    </div>
+  </header>
+
+  <main>
+    <div class="notice">
+      ⚠️ <strong>MVP / demo software.</strong> Sprint Risk Radar is provided as-is for evaluation.
+      Don't connect Jira workspaces containing sensitive or regulated data until a formal data
+      protection agreement is in place.
+    </div>
+
+    <p><em>Last updated: August 2026</em></p>
+
+    <h2>1. What we store</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Your connection profile:</strong> profile slug, Jira Cloud URL, your Jira email, project keys and LLM preferences in a single database row (hosted on Supabase).</li>
+        <li><strong>Secrets encrypted:</strong> your Jira API token and LLM API key are stored AES-GCM encrypted at rest. Your dashboard access token is kept only in your browser; the server stores just its SHA-256 hash.</li>
+        <li><strong>Cached sprint snapshot:</strong> issue keys, summaries, descriptions, statuses, story points, assignee names and sprint dates fetched from your Jira workspace, so dashboards load fast.</li>
+      </ul>
+    </div>
+
+    <h2>2. Where your data goes</h2>
+    <table>
+      <tr><th>Service</th><th>Purpose</th><th>Data involved</th></tr>
+      <tr>
+        <td>Atlassian Jira Cloud</td>
+        <td>Reads sprint &amp; issue data with <em>your own</em> API credentials</td>
+        <td>Read-only API access to projects you configure</td>
+      </tr>
+      <tr>
+        <td>Gemini or OpenRouter (your choice)</td>
+        <td>AI risk analysis &amp; mitigation drafts</td>
+        <td>Issue text with assignees replaced by pseudonyms (<code>dev-01</code>, <code>dev-02</code>…) and email addresses scrubbed. Fresh pseudonyms per request.</td>
+      </tr>
+      <tr>
+        <td>Supabase</td>
+        <td>Encrypted profile storage</td>
+        <td>Profile row described above</td>
+      </tr>
+      <tr>
+        <td>Vercel</td>
+        <td>Application hosting</td>
+        <td>Standard request logs</td>
+      </tr>
+    </table>
+
+    <h2>3. What never happens</h2>
+    <div class="card">
+      <ul>
+        <li>The app <strong>never writes to your Jira workspace</strong> — it is strictly read-only. Follow-up messages are generated for you to copy &amp; paste manually.</li>
+        <li>Real teammate names and email addresses are <strong>not sent to AI providers</strong>.</li>
+        <li>We don't sell data, add analytics trackers, or require more Jira scope than reading sprints/issues.</li>
+      </ul>
+    </div>
+
+    <h2>4. Retention &amp; your controls</h2>
+    <div class="card">
+      <ul>
+        <li>Your profile and cached sprint data are kept <strong>until you delete the profile</strong> in Settings — deletion removes the database row immediately.</li>
+        <li>You can edit or delete your profile anytime from the ⚙️ Settings page.</li>
+        <li>AI analysis happens only when you trigger it; results are returned to your browser.</li>
+      </ul>
+    </div>
+
+    <h2>5. Third-party AI caveat</h2>
+    <div class="card">
+      <p>Even with pseudonymization, prompts may contain your organization's issue titles and text. Provider
+      retention/training policies differ by plan (e.g., Gemini free vs paid tier, OpenRouter routing).
+      Review your provider's data-use terms before enabling AI features on real workspaces.</p>
+    </div>
+
+    <h2>6. Contact</h2>
+    <div class="card">
+      <p>Questions or deletion requests: <strong>[your-email@example.com]</strong></p>
+    </div>
+  </main>
+
+  <footer>
+    <a class="back" href="/">← Back to Sprint Risk Radar</a>
+  </footer>
+</body>
+</html>
