@@ -4,6 +4,7 @@ Usage:  python validate_rubric.py
 Each example is reconstructed as synthetic sprint/ticket data and the produced
 scores are asserted with a small tolerance (scores are rounded ints).
 """
+import os
 from datetime import datetime, timedelta
 
 from risk_components import (
@@ -266,6 +267,30 @@ def run():
     risks_e2 = eng.detect_external_dependencies(issues_e2, ctx_e2)
     r = [x for x in risks_e2 if x["issue_key"] == "DEP-2"][0]
     results.append(check("Counter: internal, no fan-out, 2SP", r["risk_score"], 41, tol=3))
+
+    # ------------------------------------------------------------------ #
+    # Privacy: LLM prompt sanitization (prompt_privacy)
+    # ------------------------------------------------------------------ #
+    from prompt_privacy import pseudonymize_assignee, scrub_emails
+
+    mapping = {}
+    assert pseudonymize_assignee("Sarah Chen", mapping) == "dev-01"
+    assert pseudonymize_assignee("Ravi Patel", mapping) == "dev-02"
+    results.append(check("Privacy: pseudonyms assigned in order, shared map", 1, 1, tol=0))
+    results.append(check("Privacy: same person maps consistently",
+                         1 if pseudonymize_assignee("Sarah Chen", mapping) == "dev-01" else 0, 1, tol=0))
+    results.append(check("Privacy: Unassigned passes through",
+                         1 if pseudonymize_assignee(None, mapping) == "Unassigned" else 0, 1, tol=0))
+
+    scrubbed = scrub_emails("Contact bob@corp.com about MOS-12")
+    results.append(check("Privacy: emails scrubbed from free text",
+                         1 if "bob@corp.com" not in scrubbed and "[email]" in scrubbed else 0, 1, tol=0))
+    src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mitigation_agent.py")).read()
+    wired = src.count("sanitize_issue_for_prompt(") >= 2  # sprint + next-sprint prompt builders
+    restored = "re.sub" in src and "re.escape(alias)" in src
+    deep = "deep_pseudonymize(risks[:5]" in src and "deep_pseudonymize(mitigations[:5]" in src
+    results.append(check("Privacy: sanitization wired at all prompt sites + followup restore + report deep-scan",
+                         1 if (wired and restored and deep) else 0, 1, tol=0))
 
     # ------------------------------------------------------------------ #
     print("\n" + "=" * 40)

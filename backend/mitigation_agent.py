@@ -9,6 +9,7 @@ import google.generativeai as genai
 import requests
 
 from config import UserConfig
+from prompt_privacy import deep_pseudonymize, sanitize_issue_for_prompt, scrub_emails
 
 # The google-generativeai SDK keeps API-key state process-global
 # (genai.configure); serialize init + calls to avoid cross-profile key races.
@@ -101,6 +102,10 @@ class MitigationAgent:
             return self.model.generate_content(prompt, request_options={"timeout": 45})
         finally:
             _GENAI_LOCK.release()
+
+    # ---------------- privacy: prompt sanitization ---------------- #
+    # See prompt_privacy.py — assignees become per-call pseudonyms before
+    # payloads leave for the provider; emails are scrubbed from free text.
 
     def generate_sprint_mitigation_plan(self, sprints):
         mitigations = []
@@ -212,6 +217,8 @@ class MitigationAgent:
             "description": (i.get("description") or "")[:500],
             "acceptance_criteria": (i.get("acceptance_criteria") or "")[:500],
         } for i in issues]
+        prompt_mapping = {}
+        sprint_issues = [sanitize_issue_for_prompt(i, prompt_mapping) for i in sprint_issues]
 
         return f"""
 You are an expert Scrum Master/Project Manager. Analyze this sprint and its risks, then provide actionable mitigation strategies at the sprint level.
@@ -305,10 +312,15 @@ Rules:
 
     def generate_followup_message(self, blocker):
         prompt = self._build_followup_prompt(blocker)
+        real_assignee = (blocker.get("assignee") or "").strip()
+        alias = "dev-01" if real_assignee else None
 
         try:
             response = self._generate_with_model(prompt)
             text = response.text.strip()
+            if alias:
+                # Restore the real name locally; the pseudonym never ships.
+                text = re.sub(rf"\b{re.escape(alias)}\b", real_assignee, text)
             message = self._linkify_issue_keys(text)
             return {
                 "message": message,
@@ -335,8 +347,11 @@ Rules:
 
     def _build_followup_prompt(self, blocker):
         issue_key = blocker.get("issue_key")
-        summary = blocker.get("summary") or "this ticket"
-        assignee = blocker.get("assignee") or "the assignee"
+        summary = scrub_emails(blocker.get("summary")) or "this ticket"
+        real_assignee = (blocker.get("assignee") or "").strip()
+        # Pseudonymize the person's name; the caller restores it in the
+        # generated text so it never leaves this server.
+        assignee = "dev-01" if real_assignee else "the assignee"
         risk_type = blocker.get("type", "RISK")
         hours = blocker.get("hours_since_update")
         status = blocker.get("status")
@@ -431,6 +446,8 @@ Write a short, friendly follow-up message (2-4 sentences) to {assignee} asking f
             "acceptance_criteria": (i.get("acceptance_criteria") or "")[:500],
             "due_date": i.get("due_date"),
         } for i in issues]
+        prompt_mapping = {}
+        issue_list = [sanitize_issue_for_prompt(i, prompt_mapping) for i in issue_list]
 
         return f"""
 You are an expert Scrum Master performing pre-planning risk analysis on an UPCOMING sprint.
@@ -491,6 +508,7 @@ Rules:
             return []
 
     def generate_stakeholder_report(self, risks, mitigations, sprint_data=None):
+        report_mapping = {}
         prompt = f"""
 You are creating a Sprint Status Report for Product Owners and Executives.
 
@@ -500,10 +518,10 @@ High Severity Risks: {len([r for r in risks if r.get('severity') == 'HIGH'])}
 Medium Severity Risks: {len([r for r in risks if r.get('severity') == 'MEDIUM'])}
 
 Risks Summary:
-{json.dumps(risks[:5], indent=2, default=str)}
+{json.dumps(deep_pseudonymize(risks[:5], report_mapping), indent=2, default=str)}
 
 Mitigations Proposed:
-{json.dumps(mitigations[:5], indent=2, default=str)}
+{json.dumps(deep_pseudonymize(mitigations[:5], report_mapping), indent=2, default=str)}
 
 Generate a 3-paragraph executive summary:
 1. Current Sprint Status (one sentence)
