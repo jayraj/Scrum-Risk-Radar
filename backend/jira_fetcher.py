@@ -1,5 +1,4 @@
 import logging
-import html as html_lib
 import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -11,9 +10,6 @@ from risk_components import is_qa_status
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-_ANCHOR_RE = re.compile(r'<a\s+href="([^"]*)"[^>]*>([\s\S]*?)</a>', re.IGNORECASE)
-_TAG_RE = re.compile(r'<[^>]*>')
 
 
 class JiraFetcher:
@@ -152,65 +148,6 @@ class JiraFetcher:
         except Exception as e:
             logger.error(f"Error fetching sprint issues: {e}")
             return []
-
-    def _adf_inline_nodes(self, line: str) -> list:
-        """Convert one line of (possibly anchor-containing) text into ADF inline nodes.
-
-        <a href="URL">LABEL</a> becomes a text node with a link mark; everything
-        else stays plain text. HTML entities are unescaped.
-        """
-        content = []
-        pos = 0
-        for m in _ANCHOR_RE.finditer(line):
-            if m.start() > pos:
-                content.append({"type": "text", "text": html_lib.unescape(line[pos:m.start()])})
-            label = _TAG_RE.sub("", m.group(2))
-            content.append({
-                "type": "text",
-                "text": html_lib.unescape(label),
-                "marks": [{"type": "link", "attrs": {"href": m.group(1)}}],
-            })
-            pos = m.end()
-        if pos < len(line):
-            content.append({"type": "text", "text": html_lib.unescape(line[pos:])})
-        return content
-
-    def add_comment(self, issue_key, body):
-        """Post a comment on an issue. <a href="..."> anchors in body become real links. Returns (ok, error_or_comment_id)."""
-        paragraphs = []
-        for para in (body or "").split("\n\n"):
-            lines = [ln for ln in para.split("\n")]
-            if not lines:
-                continue
-            content = []
-            for i, line in enumerate(lines):
-                if i:
-                    content.append({"type": "hardBreak"})
-                content.extend(self._adf_inline_nodes(line))
-            paragraphs.append({"type": "paragraph", "content": content})
-
-        payload = {
-            "body": {
-                "type": "doc",
-                "version": 1,
-                "content": paragraphs or [{"type": "paragraph", "content": []}],
-            }
-        }
-        try:
-            response = requests.post(
-                f"{self.base_url}/rest/api/3/issue/{issue_key}/comment",
-                auth=self.auth, headers={**self.headers, "Content-Type": "application/json"},
-                json=payload, timeout=30,
-            )
-            response.raise_for_status()
-            return True, response.json().get("id")
-        except requests.HTTPError as e:
-            detail = e.response.text[:300] if e.response is not None else str(e)
-            logger.error(f"Error posting comment to {issue_key}: {detail}")
-            return False, detail
-        except Exception as e:
-            logger.error(f"Error posting comment to {issue_key}: {e}")
-            return False, str(e)
 
     # ------------------------------------------------------------------ #
     # Aggregates

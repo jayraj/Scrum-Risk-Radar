@@ -5,7 +5,6 @@ import { useSnapshot } from '../hooks/useSnapshot'
 import {
   apiGenerateFollowup,
   apiGenerateMitigations,
-  apiPostJiraComment,
   SHOW_AI_DEBUG,
   type Blocker,
   type Mitigation,
@@ -43,7 +42,6 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
   const [draftingKey, setDraftingKey] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [draftGeneratedBy, setDraftGeneratedBy] = useState<Record<string, string>>({})
-  const [postingKeys, setPostingKeys] = useState<Record<string, 'idle' | 'posting' | 'posted' | 'error'>>({})
   const [activeTab, setActiveTab] = useState('ALL')
   const [expandedKey, setExpandedKey] = useState<string | null>(null)
 
@@ -89,20 +87,6 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
       alert('Message copied to clipboard!')
     } catch (error) {
       console.error('Copy failed:', error)
-    }
-  }
-
-  const postComment = async (issueKey: string) => {
-    const text = drafts[issueKey]
-    if (!text) return
-    setPostingKeys((prev) => ({ ...prev, [issueKey]: 'posting' }))
-    try {
-      await apiPostJiraComment(issueKey, text)
-      setPostingKeys((prev) => ({ ...prev, [issueKey]: 'posted' }))
-    } catch (error) {
-      console.error('Error posting comment:', error)
-      setPostingKeys((prev) => ({ ...prev, [issueKey]: 'error' }))
-      alert('Failed to post comment to Jira. Check the profile configuration.')
     }
   }
 
@@ -172,7 +156,7 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
         <div className="panel-heading">
           <h2 className="component-title"><ShieldAlert size={24} className="title-icon" />Blockers &amp; Impediments</h2>
           <button className="ai-scan-btn" onClick={generateMitigations} disabled={generating}>
-            <ShieldCheck size={11} />
+            <ShieldCheck size={16} />
             {generating ? 'Generating...' : 'Mitigate with AI'}
           </button>
         </div>
@@ -278,26 +262,13 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
                                 <span>✍️ AI Follow-up Message</span>
                                 <div className="draft-output-actions">
                                   <button className="copy-btn" onClick={() => copyDraft(blocker.issue_key!)}>📋 Copy</button>
-                                  {postingKeys[blocker.issue_key] !== 'posted' ? (
-                                    <button
-                                      className="post-btn"
-                                      disabled={postingKeys[blocker.issue_key] === 'posting'}
-                                      onClick={() => postComment(blocker.issue_key!)}
-                                    >
-                                      {postingKeys[blocker.issue_key] === 'posting' ? 'Posting...' : 'Approve & POST'}
-                                    </button>
-                                  ) : (
-                                    <span className="posted-note">✅ Posted to Jira</span>
-                                  )}
                                 </div>
                               </div>
                               <p
                                 className="draft-text"
                                 dangerouslySetInnerHTML={{ __html: drafts[blocker.issue_key] }}
                               />
-                              {postingKeys[blocker.issue_key] === 'error' && (
-                                <div className="fallback-note">⚠️ Couldn't post the comment — try again.</div>
-                              )}
+                              <div className="fallback-note">Paste this into the Jira ticket as a comment.</div>
                               {draftGeneratedBy[blocker.issue_key] === 'rule-based' && (
                                 <div className="fallback-note">
                                   ⚠️ Generated from available data (AI temporarily unavailable)
@@ -321,7 +292,7 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
 
         {sprintMitigation && (
           <div className="mitigation-card">
-            <h4 className="mitigation-title"><Bot size={14} className="title-icon" />AI MITIGATION PLAN</h4>
+            <h4 className="mitigation-title"><Bot size={20} className="title-icon" />AI MITIGATION PLAN</h4>
 
             {(sprintMitigation.risk_types ?? []).length > 0 && (
               <div className="risk-chips">

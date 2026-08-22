@@ -727,35 +727,6 @@ def generate_followup_message(request: Request, body: dict = None):
     return result
 
 
-@app.post("/api/post-jira-comment")
-def post_jira_comment(request: Request, body: dict = None):
-    row, error = _auth(request)
-    if error:
-        return error
-
-    payload = body or {}
-    issue_key = payload.get("issue_key")
-    message = payload.get("message")
-    if not issue_key or not message:
-        return JSONResponse(
-            {"status": "error", "error": "issue_key and message are required"},
-            status_code=400,
-        )
-    if not re.match(r"^[A-Z][A-Z0-9]*-\d+$", str(issue_key)) or len(message) > 10000:
-        return JSONResponse({"status": "error", "error": "Invalid issue_key or message"}, status_code=400)
-
-    limited = rate_limit(f"comment:{row.get('slug')}", max_requests=20, window_seconds=300)
-    if limited:
-        return limited
-
-    config = UserConfig.from_row(row, decrypt)
-    ok, result = JiraFetcher(config).add_comment(issue_key, message)
-    if not ok:
-        logger.error(f"Comment post failed for {issue_key} (profile {row.get('slug')}): {result}")
-        return JSONResponse({"status": "error", "error": "Failed to post comment to Jira"}, status_code=502)
-    return {"status": "posted", "issue_key": issue_key, "comment_id": result}
-
-
 @app.get("/api/stakeholder-report")
 def stakeholder_report(request: Request):
     row, error = _auth(request)

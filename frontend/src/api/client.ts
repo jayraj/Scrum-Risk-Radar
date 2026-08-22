@@ -295,8 +295,5 @@ export const apiNextSprintRisks = async (projectKey: string): Promise<NextSprint
 export const apiGenerateFollowup = async (issueKey: string): Promise<FollowupMessage> =>
   (await api.post('/api/generate-followup-message', { issue_key: issueKey })).data
 
-export const apiPostJiraComment = async (issueKey: string, message: string): Promise<{ status: string; comment_id?: string }> =>
-  (await api.post('/api/post-jira-comment', { issue_key: issueKey, message })).data
-
 export const apiStakeholderReport = async (): Promise<{ report: string; generated_at: string }> =>
   (await api.get('/api/stakeholder-report')).data
