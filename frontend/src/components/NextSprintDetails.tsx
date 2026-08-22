@@ -115,7 +115,7 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
           </div>
           <button className="ai-scan-btn" onClick={analyzeRisks} disabled={analyzing}>
             <RefreshCw size={16} />
-            {analyzing ? 'Analyzing...' : 'RUN AI SCAN'}
+            {analyzing ? 'Analyzing...' : 'SCAN WITH AI'}
           </button>
         </div>
         <div className="sprint-detail-meta">
