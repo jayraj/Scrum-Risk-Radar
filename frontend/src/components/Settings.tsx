@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { PlugZap, Save, X } from 'lucide-react'
 import {
   apiConfigDefaults,
@@ -212,6 +213,9 @@ export default function Settings({ onProfilesChanged, onSelectProfile }: Setting
 
   return (
     <div className="settings-page">
+      <nav className="breadcrumb" aria-label="Navigation">
+        <Link to="/">← Go to Dashboard</Link>
+      </nav>
       <h2 className="component-title">⚙️ Settings</h2>
       <p className="settings-intro">
         Configure your Jira Cloud workspace and LLM provider. Each profile is stored encrypted in Supabase; the access
