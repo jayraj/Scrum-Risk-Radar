@@ -664,14 +664,6 @@ body {
   color: var(--color-neutral-500);
 }
 
-.no-data {
-  text-align: center;
-  padding: 40px;
-  color: var(--color-neutral-500);
-  font-size: 16px;
-  font-weight: 500;
-}
-
 .empty-profile {
   display: flex;
   flex-direction: column;
@@ -716,12 +708,19 @@ body {
   margin: 0;
 }
 
-.empty-cell {
+/* Empty-state messaging — one consistent style app-wide */
+.empty-cell,
+.no-data,
+.risk-table-empty {
   padding: 16px;
   text-align: center;
-  color: #10b981;
+  color: var(--color-success);
   font-size: 13px;
   font-weight: 500;
+}
+
+.no-data {
+  padding: 40px 16px; /* page-level states get more breathing room */
 }
 
 /* ---------- radar ---------- */
@@ -843,6 +842,7 @@ body {
 }
 
 .status-dot {
+  display: inline-block;
   width: 10px;
   height: 10px;
   border-radius: 50%;
@@ -1185,13 +1185,6 @@ body {
   width: auto;
   margin-top: 0;
   padding: 6px 12px;
-}
-
-.risk-table-empty {
-  padding: 16px;
-  font-size: 13px;
-  color: var(--color-neutral-400);
-  text-align: center;
 }
 
 .draft-btn {
