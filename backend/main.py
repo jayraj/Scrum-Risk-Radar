@@ -1,5 +1,6 @@
 import hmac
 import logging
+import os
 import re
 import secrets
 import threading
@@ -22,10 +23,20 @@ from supabase_store import DuplicateProfileError, SupabaseStore
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Interactive API docs (/docs, /redoc, /openapi.json) are disabled in production
+# deployments (Vercel sets VERCEL_ENV=production; or set ENVIRONMENT=production).
+_IS_PROD = (
+    os.getenv("VERCEL_ENV") == "production"
+    or os.getenv("ENVIRONMENT", "").strip().lower() in {"prod", "production"}
+)
+
 app = FastAPI(
-    title="Sprint Risk Radar API",
+    title="PORTFOLIO RISK RADAR API",
     version="3.0.0",
     description="Multi-scrum-master SaaS API (profiles in Supabase, serverless on Vercel)",
+    docs_url=None if _IS_PROD else "/docs",
+    redoc_url=None if _IS_PROD else "/redoc",
+    openapi_url=None if _IS_PROD else "/openapi.json",
 )
 
 app.add_middleware(
