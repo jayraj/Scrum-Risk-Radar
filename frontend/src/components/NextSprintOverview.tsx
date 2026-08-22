@@ -29,7 +29,7 @@ export default function NextSprintOverview({ syncIntervalSeconds, refreshKey = 0
   return (
     <div className="next-sprint-overview">
       <h2 className="component-title"><Compass size={24} className="title-icon" />FUTURE SPRINT(S)</h2>
-      <p className="component-subtitle">Analyze risks before sprint planning.</p>
+      <p className="component-subtitle">A pre-planning health check — catch unassigned, unestimated, or oversized work before day one.</p>
 
       {loading ? (
         <div className="loading">Loading next sprint data...</div>
@@ -61,11 +61,6 @@ export default function NextSprintOverview({ syncIntervalSeconds, refreshKey = 0
               </div>
 
               <div className="risk-footer">
-                <div className="issue-types">
-                  {Object.entries(project.issue_types).map(([type, count]) => (
-                    <span key={type} className="type-chip">{type}: {count}</span>
-                  ))}
-                </div>
                 <button className="details-btn" onClick={() => navigate(`/future/${encodeURIComponent(project.project_key)}`)}>
                   Details →
                 </button>

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route, Link } from 'react-router-dom'
+import { MessageSquareText } from 'lucide-react'
 import TopStrip from './components/TopStrip'
 import DashboardHome from './components/DashboardHome'
 import SprintDetails from './components/SprintDetails'
 import FutureSprintDetailsPage from './components/FutureSprintDetailsPage'
 import ExecutiveDashboard from './components/ExecutiveDashboard'
 import Settings from './components/Settings'
-import { apiSyncNow } from './api/client'
+import { apiSyncNow, FEEDBACK_URL } from './api/client'
 import { profileApi } from './api/config'
 import { subscribeLastSync } from './hooks/useSnapshot'
 import { formatLastSync } from './utils/format'
@@ -136,6 +137,18 @@ export default function App() {
           </Routes>
         </main>
       </div>
+
+      <footer className="app-footer">
+        {FEEDBACK_URL && (
+          <span>
+            Please leave your valuable feedback{' '}
+            <a href={FEEDBACK_URL} target="_blank" rel="noreferrer">
+              <MessageSquareText size={14} strokeWidth={2} />
+              here
+            </a>.
+          </span>
+        )}
+      </footer>
     </div>
   )
 }

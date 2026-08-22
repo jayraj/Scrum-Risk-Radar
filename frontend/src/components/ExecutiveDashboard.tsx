@@ -69,7 +69,11 @@ export default function ExecutiveDashboard({ syncIntervalSeconds, refreshKey = 0
         <div>
           <h2>📊 Portfolio Overview</h2>
           <p className="portfolio-summary">
-            {projectCount} projects · {projectCount} teams · {riskCount} risks flagged
+            {projectCount > 0 && (
+              <>
+                {projectCount} projects · {projectCount} teams · {riskCount} risks flagged
+              </>
+            )}
           </p>
         </div>
         <button className="generate-btn" onClick={fetchReport} disabled={generating}>
@@ -155,7 +159,7 @@ export default function ExecutiveDashboard({ syncIntervalSeconds, refreshKey = 0
           )}
 
           <div className="risks-section">
-            <h3>🔍 Current Sprint Risks</h3>
+            <h3>🔍 Active Sprint Risks</h3>
             {risks.length === 0 ? (
               <div className="empty-cell">✅ No risks detected in current sprints.</div>
             ) : (

@@ -226,7 +226,7 @@ export default function Settings({ onProfilesChanged, onSelectProfile }: Setting
         <a className="guide-card" href="/user-guide.html" target="_blank" rel="noreferrer">
           <span className="guide-card-icon">📖</span>
           <span>
-            <strong>New to Sprint Risk Radar?</strong>
+            <strong>New to PORTFOLIO RISK RADAR?</strong>
             <span className="guide-card-sub">Read the User Guide — setup, every dashboard section, and troubleshooting.</span>
           </span>
           <span className="guide-card-arrow">→</span>

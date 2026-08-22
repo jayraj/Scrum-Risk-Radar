@@ -1,6 +1,6 @@
 # System Guidelines
 
-Rules and guidelines to follow when generating code for the Sprint Risk Radar v2 app.
+Rules and guidelines to follow when generating code for the PORTFOLIO RISK RADAR app.
 
 # General guidelines
 

@@ -129,13 +129,6 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
           <p className="sprint-meta">{project.total_sp} story points</p>
         </div>
 
-        <div className="risk-footer">
-          <div className="issue-types">
-            {Object.entries(project.issue_types).map(([type, count]) => (
-              <span key={type} className="type-chip">{type}: {count}</span>
-            ))}
-          </div>
-        </div>
       </div>
 
       <div className="blockers-panel">

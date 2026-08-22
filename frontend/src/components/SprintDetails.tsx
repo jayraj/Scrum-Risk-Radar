@@ -113,9 +113,9 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
         <Link to="/">Home</Link>
         <span className="breadcrumb-sep">/</span>
         {onBack ? (
-          <button className="breadcrumb-link-btn" onClick={onBack}>CURRENT SPRINT(S)</button>
+          <button className="breadcrumb-link-btn" onClick={onBack}>ACTIVE SPRINT(S)</button>
         ) : (
-          <Link to="/">CURRENT SPRINT(S)</Link>
+          <Link to="/">ACTIVE SPRINT(S)</Link>
         )}
         <span className="breadcrumb-sep">/</span>
         <span className="breadcrumb-current">{resolvedName}</span>

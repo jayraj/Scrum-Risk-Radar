@@ -6,6 +6,9 @@ export const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 
 /** Debug visibility for the "🔍 View AI Prompt & Raw Response" sections. Opt-in via VITE_SHOW_AI_DEBUG=true. */
 export const SHOW_AI_DEBUG = import.meta.env.VITE_SHOW_AI_DEBUG === 'true'
 
+/** Feedback form URL; set VITE_FEEDBACK_URL to show the footer Feedback link. */
+export const FEEDBACK_URL = import.meta.env.VITE_FEEDBACK_URL || ''
+
 /** Extracts the backend's error message from an axios error, with a fallback. */
 export const apiErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {

@@ -36,12 +36,14 @@ export default function RiskRadar({ syncIntervalSeconds, refreshKey = 0 }: RiskR
 
   return (
     <div className="risk-radar">
-      <h2 className="component-title"><Target size={24} className="title-icon" />CURRENT SPRINT(S)</h2>
-      <p className="component-subtitle">Analyze risks in the current sprints</p>
-      <div className="portfolio-meta">
-        {new Set(radarData.map((r) => r.project_key).filter(Boolean)).size} projects ·{' '}
-        {radarData.length} teams · {snapshot?.total_risks ?? 0} risks flagged
-      </div>
+      <h2 className="component-title"><Target size={24} className="title-icon" />ACTIVE SPRINT(S)</h2>
+      <p className="component-subtitle">Live risk scores for your active sprints — spot stalled tickets, burndown gaps, and fresh bugs early enough to act.</p>
+      {radarData.length > 0 && (
+        <div className="portfolio-meta">
+          {new Set(radarData.map((r) => r.project_key).filter(Boolean)).size} projects ·{' '}
+          {radarData.length} teams · {snapshot?.total_risks ?? 0} risks flagged
+        </div>
+      )}
 
       {loading ? (
         <div className="loading">Loading risks...</div>
@@ -130,7 +132,7 @@ export default function RiskRadar({ syncIntervalSeconds, refreshKey = 0 }: RiskR
 
       {radarData.length === 0 && !loading && (
         <div className="no-data">
-          ✅ All Active sprints has been completed. Start a Sprint in Jira and you can surface the risk from day one.
+          ✅ There are currently no active sprints running in Jira. Once you start a sprint, it will appear here.
         </div>
       )}
     </div>

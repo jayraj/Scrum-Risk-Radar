@@ -210,6 +210,43 @@ body {
   min-height: 0;
 }
 
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: 12px 24px;
+  border-top: 1px solid var(--border-color);
+  font-size: 13px;
+  color: var(--color-neutral-600);
+  background: var(--bg-card);
+}
+
+.app-footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 2px;
+  padding: 3px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-50);
+  border: 1px solid var(--color-primary-200);
+  color: var(--color-primary-700);
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 150ms ease;
+}
+
+.app-footer a:hover {
+  background: var(--color-primary-100);
+  border-color: var(--color-primary-300);
+}
+
+.app-footer a:focus-visible {
+  outline: 3px solid var(--color-primary-300);
+  outline-offset: 2px;
+}
+
 .icon-btn {
   display: inline-flex;
   align-items: center;
