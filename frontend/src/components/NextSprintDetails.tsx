@@ -105,7 +105,10 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
         <span className="breadcrumb-current">{project.sprint_key}</span>
       </nav>
 
-      <div className={`sprint-details-header risk-card indigo`}>
+      <div
+        className="sprint-details-header risk-card indigo"
+        style={{ borderLeftColor: getRiskColor(project.risk_score) }}
+      >
         <div className="risk-header">
           <span className="issue-key">{project.project_key}</span>
           <span className="risk-score" style={{ backgroundColor: getRiskColor(project.risk_score) }}>
