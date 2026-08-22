@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Guide — Sprint Risk Radar</title>
+  <style>
+    :root {
+      --ink: #1e293b;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --accent: #2563eb;
+      --green: #10b981;
+      --red: #ef4444;
+      --amber: #d97706;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+    header { background: #111827; color: #f9fafb; padding: 20px 24px; }
+    header .wrap { max-width: 800px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+    header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+    main { max-width: 800px; margin: 0 auto; padding: 32px 24px 64px; }
+    h2 { font-size: 17px; font-weight: 700; margin: 30px 0 10px; letter-spacing: -0.01em; padding-top: 8px; }
+    h3 { font-size: 15px; font-weight: 700; margin: 16px 0 6px; }
+    p, li { color: #334155; }
+    ul, ol { padding-left: 22px; margin: 8px 0; }
+    li { margin-bottom: 4px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px 20px;
+      margin-top: 12px;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+    th { text-align: left; font-size: 13px; background: #f1f5f9; padding: 10px 14px; }
+    td { font-size: 14px; padding: 10px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+    code { background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-size: 13px; }
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .tip { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 14px; margin: 10px 0; color: #1d4ed8; font-size: 14px; }
+    footer { max-width: 800px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-size: 13px; }
+    .back { color: #93c5fd; text-decoration: none; font-size: 14px; }
+    .back:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <span style="font-size:22px">📖</span>
+      <h1>Sprint Risk Radar — User Guide</h1>
+    </div>
+  </header>
+
+  <main>
+    <p>Sprint Risk Radar watches your active and upcoming Jira sprints, scores delivery risks
+    in real time, and drafts AI mitigation plans — so you can act before a sprint slips.</p>
+
+    <h2>1. Get started: connect your workspace</h2>
+    <div class="card">
+      <ol>
+        <li>Open <strong>⚙️ Settings</strong> and fill the profile form:
+          <ul>
+            <li><strong>Jira Cloud URL</strong> — e.g. <code>https://your-domain.atlassian.net</code></li>
+            <li><strong>Jira email + API token</strong> — create one at
+              <code>id.atlassian.com/manage-profile/security/api-tokens</code></li>
+            <li><strong>Project keys</strong> — comma separated, e.g. <code>PFIN, MOS</code></li>
+          </ul>
+        </li>
+        <li>(Optional) pick an <strong>LLM provider</strong>: Gemini or OpenRouter, with your API key.
+            Without it everything still works using built-in rule-based scoring.</li>
+        <li>Click <strong>🔌 Test Connection</strong> to verify auth, story-point field detection and each project's sprint status.</li>
+        <li>Click <strong>💾 Save Profile</strong>. Your access token is stored only in this browser.</li>
+      </ol>
+      <div class="tip">🔒 Secrets are encrypted at rest; teammate names &amp; emails are pseudonymized before any data reaches AI providers. See the <a href="/privacy.html">privacy notice</a>.</div>
+    </div>
+
+    <h2>2. The dashboard</h2>
+
+    <h3>🎯 Risk Radar (current sprints)</h3>
+    <p>One card per active sprint with its overall risk score and top risk type. Click
+    <strong>Details →</strong> to open the sprint view.</p>
+
+    <h3>📋 Sprint Details</h3>
+    <ul>
+      <li><strong>Severity tabs</strong> (ALL / CRITICAL / HIGH / MEDIUM / LOW) filter the blockers table.</li>
+      <li>Each row shows category, severity, detection reason, affected stories and live status. Click a row to expand its AI mitigation strategy.</li>
+      <li><strong>Mitigate with AI →</strong> generates a full action plan (owner, timeline, success criteria).</li>
+      <li><strong>💬 Draft Message</strong> writes a polite follow-up for the assignee. Hit 📋 Copy and paste it into the Jira ticket yourself — the app never posts to Jira.</li>
+    </ul>
+
+    <h3>🧭 Future Sprints (readiness)</h3>
+    <p>Before planning begins, run <strong>Analyze Next Sprint Risks</strong> on an upcoming
+    sprint to surface early warnings: unassigned work, missing story points, thin acceptance
+    criteria, overloaded assignees, hidden dependencies.</p>
+
+    <h3>📈 Velocity &amp; 📊 Portfolio</h3>
+    <p>Trend views of completed story points per sprint and a cross-project executive summary,
+    including an AI stakeholder report you can paste into updates.</p>
+
+    <h3>Risk severity colors</h3>
+    <table>
+      <tr><th>Badge</th><th>Meaning</th><th>Suggested response</th></tr>
+      <tr><td><span class="dot" style="background:#ef4444"></span><strong>CRITICAL</strong></td><td>Sprint outcome at serious risk</td><td>Act today; escalate</td></tr>
+      <tr><td><span class="dot" style="background:#d97706"></span><strong>HIGH</strong></td><td>Likely slippage without intervention</td><td>Plan mitigation this week</td></tr>
+      <tr><td><span class="dot" style="background:#f59e0b"></span><strong>MEDIUM</strong></td><td>Watch-list item</td><td>Monitor at stand-up</td></tr>
+      <tr><td><span class="dot" style="background:#10b981"></span><strong>LOW</strong></td><td>No action needed</td><td>—</td></tr>
+    </table>
+
+    <h2>3. Data freshness</h2>
+    <p>The dashboard reads from a cached snapshot refreshed automatically every few minutes,
+    or immediately via <strong>⟳ Sync Now</strong> in the top bar.</p>
+
+    <h2>4. Troubleshooting</h2>
+    <table>
+      <tr><th>Symptom</th><th>Fix</th></tr>
+      <tr><td>"No active current sprints"</td><td>Start/schedule a sprint in Jira for the configured projects, then Sync Now.</td></tr>
+      <tr><td>AI analysis fails or is slow</td><td>LLM calls are capped ~45s; if the provider times out the app falls back to rule-based results automatically. Retry or check your LLM key.</td></tr>
+      <tr><td>"Rule-based fallback" label</td><td>AI was unavailable — scores come from the deterministic engine; safe to use.</td></tr>
+      <tr><td>Story points show 0</td><td>Your Jira uses a custom field. Set it in Settings (<code>customfield_10102</code>-style); Test Connection verifies it.</td></tr>
+      <tr><td>Test Connection project ❌</td><td>Check the project key spelling and that your Jira account can browse that project.</td></tr>
+    </table>
+
+    <h2>5. Good to know</h2>
+    <div class="card">
+      <ul>
+        <li>This is MVP software — avoid connecting production workspaces (see <a href="/privacy.html">privacy notice</a>).</li>
+        <li>Multiple profiles are supported; switch between them from the top bar. Each browser keeps its own tokens.</li>
+        <li>Deleting a profile in Settings erases its server-side data immediately.</li>
+      </ul>
+    </div>
+  </main>
+
+  <footer>
+    <a class="back" href="/">← Back to Sprint Risk Radar</a>
+  </footer>
+</body>
+</html>

@@ -2015,3 +2015,44 @@ body {
   color: var(--color-warning-700);
   font-weight: 600;
 }
+
+.guide-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 20px;
+  padding: 12px 16px;
+  background: var(--color-primary-50);
+  border: 1px solid var(--color-primary-200);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.guide-card:hover {
+  box-shadow: var(--shadow-subtle);
+  transform: translateY(-1px);
+}
+
+.guide-card-icon {
+  font-size: 22px;
+}
+
+.guide-card strong {
+  display: block;
+  color: var(--color-primary-700);
+  font-size: 14px;
+}
+
+.guide-card-sub {
+  display: block;
+  font-size: 13px;
+  color: var(--color-neutral-600);
+}
+
+.guide-card-arrow {
+  margin-left: auto;
+  color: var(--color-primary-600);
+  font-weight: 700;
+}
