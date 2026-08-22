@@ -2016,6 +2016,10 @@ body {
   font-weight: 600;
 }
 
+.llm-data-note {
+  margin-top: 12px;
+}
+
 .guide-card {
   display: flex;
   align-items: center;

@@ -337,6 +337,12 @@ export default function Settings({ onProfilesChanged, onSelectProfile }: Setting
           </label>
         </div>
 
+        <p className="token-note llm-data-note">
+          ⚠️ On Gemini's <strong>free tier</strong>, Google may use submitted prompts for product improvement —
+          use a paid-tier key if that's unacceptable. For OpenRouter, prefer providers with a
+          no-training / zero-retention policy. Issue text may still reach the provider (assignees are pseudonymized).
+        </p>
+
         <p className="token-note privacy-note">
           ℹ️ Saving shares this workspace's sprint data (assignee names, issue summaries and descriptions) with your
           chosen AI provider for analysis. Nothing is ever written back to Jira — follow-up messages are generated for
