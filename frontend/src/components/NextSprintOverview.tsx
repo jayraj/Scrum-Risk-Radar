@@ -36,7 +36,11 @@ export default function NextSprintOverview({ syncIntervalSeconds, refreshKey = 0
       ) : (
         <div className="radar-grid">
           {projects.map((project) => (
-            <div key={project.project_key} className="risk-card indigo">
+            <div
+              key={project.project_key}
+              className="risk-card indigo"
+              style={{ borderLeftColor: getRiskColor(project.risk_score) }}
+            >
               <div className="risk-header">
                 <span className="issue-key">
                   {project.sprint_key}
