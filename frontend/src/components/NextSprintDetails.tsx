@@ -120,13 +120,23 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
         </div>
         <div className="sprint-detail-meta">
           {project.start_date && project.end_date ? (
-            <span>{project.sprint_key} · {formatDate(project.start_date)} → {formatDate(project.end_date)}</span>
+            <span>
+              <span className="status-dot" style={{ backgroundColor: getRiskColor(project.risk_score) }} />{' '}
+              {project.sprint_key} · {formatDate(project.start_date)} → {formatDate(project.end_date)}
+            </span>
           ) : (
-            <span>{project.sprint_key}</span>
+            <span>
+              <span className="status-dot" style={{ backgroundColor: getRiskColor(project.risk_score) }} />{' '}
+              {project.sprint_key}
+            </span>
           )}
           <span>{project.issue_count} issue(s) planned</span>
           <span>{project.total_sp} story points</span>
         </div>
+
+        {nextSprintRisks && !analyzing && nextSprintRisks.length === 0 && (
+          <div className="risk-summary ok">✅ No early risks found before planning.</div>
+        )}
 
         {nextSprintRisks && nextSprintRisks.length > 0 && (() => {
             const categories = Array.from(new Set(nextSprintRisks.map((r) => r.type)))

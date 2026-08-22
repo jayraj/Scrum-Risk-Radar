@@ -43,6 +43,10 @@ export default function NextSprintOverview({ syncIntervalSeconds, refreshKey = 0
             >
               <div className="risk-header">
                 <span className="issue-key">
+                  <span
+                    className="status-dot"
+                    style={{ backgroundColor: getRiskColor(project.risk_score) }}
+                  />
                   {project.sprint_key}
                   {project.start_date && project.end_date && (
                     <span className="sprint-dates">
