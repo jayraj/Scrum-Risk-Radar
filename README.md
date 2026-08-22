@@ -6,6 +6,8 @@ profiles encrypted in **Supabase** and serves the whole dashboard from a single
 **cached snapshot** so it can run on **Vercel serverless** (free plan). Scoring
 uses the **Sprint Risk Scoring Rubric v2** (`severity × time-pressure × blast-radius`).
 
+> 📘 End-user documentation: [docs/USER_MANUAL.html](docs/USER_MANUAL.html)
+
 ## Architecture
 
 ```

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint Risk Radar — User Guide</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         color: #1f2937; max-width: 900px; margin: 0 auto; padding: 24px 20px 64px;
+         line-height: 1.55; font-size: 15px; }
+  h1 { font-size: 26px; border-bottom: 3px solid #22d3ee; padding-bottom: 8px; }
+  h2 { font-size: 19px; margin-top: 36px; color: #111827; }
+  h3 { font-size: 15px; margin-top: 20px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+  th, td { border: 1px solid #e5e7eb; padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: #f8fafc; }
+  code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  .tag { display: inline-block; color: #fff; font-size: 11px; font-weight: 700;
+         padding: 2px 8px; border-radius: 10px; }
+  .low { background: #16a34a; } .medium { background: #f59e0b; }
+  .high { background: #ea8c00; } .critical { background: #dc2626; }
+  .note { background: #ecfeff; border-left: 4px solid #22d3ee; padding: 10px 14px;
+          border-radius: 6px; margin: 12px 0; font-size: 14px; }
+  footer { margin-top: 48px; font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb;
+           padding-top: 12px; }
+</style>
+</head>
+<body>
+
+<h1>🎯 Sprint Risk Radar — User Guide</h1>
+<p>Sprint Risk Radar connects to your <strong>Jira Cloud</strong>, watches active and planned
+sprints, scores them for risk (0–100), explains exactly which tickets drive that score,
+and uses <strong>AI</strong> to suggest mitigations, draft follow-ups and write reports.</p>
+
+<h2>1. Configuring your Settings</h2>
+<p>Open <strong>Settings</strong> from the top bar. A <em>profile</em> holds one Jira connection
+and one AI provider. Fill in the form and press <strong>💾 Save Profile</strong>.</p>
+
+<h3>Jira connection</h3>
+<table>
+  <tr><th style="width:32%">Field</th><th>What to enter</th></tr>
+  <tr><td><strong>Slug</strong></td><td>Short id for this profile, lowercase with hyphens (e.g. <code>acme-scm</code>). Locked after creation.</td></tr>
+  <tr><td><strong>Jira Cloud URL</strong></td><td>e.g. <code>https://your-domain.atlassian.net</code></td></tr>
+  <tr><td><strong>Jira email</strong></td><td>Your Jira login email.</td></tr>
+  <tr><td><strong>Jira API token</strong></td><td>Create at <code>id.atlassian.com → Security → API tokens</code>. When editing, leave blank to keep the existing token.</td></tr>
+  <tr><td><strong>Project keys</strong></td><td>Comma-separated projects to watch, e.g. <code>PFIN, MOS</code>. Each project gets its own sprint card.</td></tr>
+  <tr><td><strong>Story points field</strong></td><td>Optional — leave blank to auto-detect your board's field, or set e.g. <code>customfield_10102</code>.</td></tr>
+</table>
+
+<h3>AI provider</h3>
+<table>
+  <tr><th style="width:32%">Field</th><th>What to enter</th></tr>
+  <tr><td><strong>LLM provider</strong></td><td><code>Gemini</code> (Google AI Studio key) or <code>OpenRouter</code> (<code>sk-or-v1-…</code> key).</td></tr>
+  <tr><td><strong>Model</strong></td><td>A default is suggested per provider (e.g. <code>gemini-flash-latest</code>).</td></tr>
+  <tr><td><strong>LLM API key</strong></td><td>Your provider key. Blank on edit = keep current.</td></tr>
+</table>
+
+<div class="note"><strong>Tip:</strong> click <strong>🔌 Test Connection</strong> before saving — it verifies your
+Jira credentials immediately. In <em>Saved profiles</em> you can <strong>Activate</strong> (switch dashboard),
+<strong>Edit</strong> or <strong>Delete</strong> profiles. Data refreshes automatically every 5 minutes;
+use <strong>SYNC NOW</strong> in the top bar for an instant pull.</div>
+
+<h2>2. Risk rules &amp; scoring</h2>
+<p>Every risk scores <strong>0–100</strong> and maps to a severity:</p>
+<table>
+  <tr><th>Severity</th><th>Score</th><th>Status label</th></tr>
+  <tr><td><span class="tag low">LOW</span></td><td>0–34</td><td>MITIGATED</td></tr>
+  <tr><td><span class="tag medium">MEDIUM</span></td><td>35–59</td><td>MONITORING</td></tr>
+  <tr><td><span class="tag high">HIGH</span></td><td>60–79</td><td>ACTIVE</td></tr>
+  <tr><td><span class="tag critical">CRITICAL</span></td><td>80–100</td><td>ACTIVE</td></tr>
+</table>
+
+<h3>Active-sprint rules</h3>
+<p>Each rule watches for one warning sign and turns it into a 0–100 score.
+The idea is always the same: <strong>start from how bad the situation is, then grow the
+score if time is running out.</strong></p>
+<table>
+  <tr><th style="width:25%">Rule</th><th style="width:37%">Fires when…</th><th>How it is scored</th></tr>
+  <tr>
+    <td>📉 <strong>Burndown Behind</strong></td>
+    <td>The sprint burns down &gt;10% slower than the ideal line.</td>
+    <td>The score starts as your % delay vs plan (e.g. 25% behind → score 25), but never
+        starts above 60. It then climbs if the sprint is almost over or the delay keeps
+        growing. So being 20% behind early on scores ~25, while being 20% behind in the
+        final days can cross 70.</td>
+  </tr>
+  <tr>
+    <td>📍 <strong>Not Progressing</strong></td>
+    <td>An open ticket has had <strong>no updates for over 24h</strong>. One row per stuck ticket.</td>
+    <td>Silence costs points: 1 point per every 2 hours without an update, up to 50
+        (a full day of silence ≈ 12 points, three days ≈ 36). Large tickets, tickets barely
+        started, or owners juggling too many tickets add a bit extra on top.</td>
+  </tr>
+  <tr>
+    <td>🧪 <strong>QA Bottleneck</strong></td>
+    <td><strong>2+ stories</strong> are waiting in QA late in the sprint.</td>
+    <td>Asks one question: <em>can QA clear everything waiting before the sprint ends?</em>
+        Lots of QA work with plenty of days left → low score. The same queue when only a
+        day or two remains → score shoots toward 70+.</td>
+  </tr>
+  <tr>
+    <td>⏰ <strong>Due Date Passed</strong></td>
+    <td>A ticket is past its due date without completing QA.</td>
+    <td>Every day overdue adds 15 points, stopping once it reaches 70 (so 5+ days overdue
+        all look alike). Very large tickets and tickets other work depends on score extra.
+        Only the single most overdue ticket counts on the sprint card.</td>
+  </tr>
+  <tr>
+    <td>🔗 <strong>External Dep</strong></td>
+    <td>A ticket is blocked by another team/vendor via a "is blocked by" link.</td>
+    <td>Waiting on someone outside your team starts high (75); waiting on a sibling team
+        inside your own org starts moderate (50). Each additional blocker pushes the score
+        further up, and large tickets score higher than small ones.</td>
+  </tr>
+  <tr>
+    <td>🐛 <strong>Bug Raised</strong></td>
+    <td>A defect was created during the current sprint. Tier comes from its Jira priority
+        (Highest→P1, High→P2, Medium→P3, Low/Lowest→P4).</td>
+    <td>The bug's priority decides which band its score lives in (table below). A fresh bug
+        enters at the bottom of its band and drifts toward the top as it ages — e.g. an open
+        P1 starts at 80 and creeps toward 90 the longer it sits unfixed.</td>
+  </tr>
+</table>
+
+<h3>In-sprint defect bands (🐛 Bug Raised)</h3>
+<table>
+  <tr><th>Condition</th><th>Score</th><th>Rationale</th></tr>
+  <tr><td>No in-sprint defect</td><td>none</td><td>No quality risk introduced.</td></tr>
+  <tr><td>P3/P4 defect found</td><td>10–20</td><td>Minor impact; normal quality variation.</td></tr>
+  <tr><td>P2 defect found</td><td>30–50</td><td>Moderate quality risk requiring attention.</td></tr>
+  <tr><td>P1 fixed before sprint end</td><td>60–70</td><td>High risk, but contained before release.</td></tr>
+  <tr><td>P1 still open</td><td>80–90</td><td>Very high risk; work may not meet the Definition of Done.</td></tr>
+  <tr><td>P1 escaped to production</td><td><strong>100</strong></td><td>Maximum risk due to customer/business impact.</td></tr>
+</table>
+<div class="note">To flag a production escape, add the label <code>production</code> (or
+<code>prod-escape</code>) to the P1 bug in Jira — it scores 100 automatically, no configuration needed.</div>
+
+<h3>Next-sprint readiness rules (before planning)</h3>
+<p>These check the committed backlog before a sprint starts. Each problem found adds
+points, so a handful of issues is mild but a pattern is loud:</p>
+<table>
+  <tr><th style="width:30%">Rule</th><th>Fires when…</th><th>How it is scored</th></tr>
+  <tr><td>👤 <strong>Unassigned</strong></td><td>Committed issues have no assignee.</td><td>Starts at 40; each extra unassigned issue adds 10 — nobody owning work is treated as an immediate risk.</td></tr>
+  <tr><td>📐 <strong>Unestimated</strong></td><td>Issues carry no story points.</td><td>Starts at 35; +8 per unestimated issue — you can't forecast what you haven't sized.</td></tr>
+  <tr><td>📝 <strong>Undefined Scope</strong></td><td>Issues lack description/acceptance criteria.</td><td>Starts at 30; +8 per vague issue — vague tickets become surprises mid-sprint.</td></tr>
+  <tr><td>🏗️ <strong>Oversized</strong></td><td>Issues are very large relative to the sprint average.</td><td>Starts at 50; +15 per oversized issue — the most likely single cause of a failed sprint.</td></tr>
+</table>
+
+<h2>3. How Sprint Risk Radar leverages AI</h2>
+<p>Rules detect <em>what</em> is risky; AI explains <em>what to do about it</em>. Your provider
+and API key come from Settings (§1).</p>
+<table>
+  <tr><th style="width:28%">Feature</th><th style="width:22%">Where</th><th>What it does</th></tr>
+  <tr>
+    <td><strong>Mitigate with AI</strong></td>
+    <td>Sprint details page</td>
+    <td>Analyzes every blocker in the sprint and writes an <strong>AI MITIGATION PLAN</strong> — concrete actions per risk category.</td>
+  </tr>
+  <tr>
+    <td><strong>⚡ AI Mitigation Strategy</strong></td>
+    <td>Expand any risk row</td>
+    <td>A short, specific recommendation for that single risk. Always available — even if the AI provider is unreachable (rule-based fallback text).</td>
+  </tr>
+  <tr>
+    <td><strong>💬 Draft Message</strong></td>
+    <td>Expand any ticket row</td>
+    <td>Drafts a polite follow-up message for the ticket's assignee. Review it, then <strong>📋 Copy</strong> or <strong>Approve &amp; POST</strong> to publish it as a Jira comment (✅ Posted to Jira).</td>
+  </tr>
+  <tr>
+    <td><strong>RUN AI SCAN</strong></td>
+    <td>Future sprint page</td>
+    <td>Scans the planned backlog before the sprint starts and lists early risks per ticket. <strong>🔍 View AI Prompt &amp; Raw Response</strong> shows exactly what was asked and answered.</td>
+  </tr>
+  <tr>
+    <td><strong>🤖 Generate AI Report</strong></td>
+    <td>Executive dashboard</td>
+    <td>Produces a stakeholder-ready portfolio summary with delivery health and top risks, timestamped for sharing.</td>
+  </tr>
+</table>
+<div class="note"><strong>Graceful degradation:</strong> detection and scoring are pure rules and work
+without any AI key. Only drafts, mitigation plans and reports need the LLM — and those fall back to
+clear error messages if the provider fails.</div>
+
+<footer>Sprint Risk Radar v2 · Developer setup &amp; deployment: see <a href="../README.md">README.md</a></footer>
+
+</body>
+</html>
