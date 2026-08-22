@@ -42,7 +42,7 @@ class OpenRouterModel:
             "temperature": 0.3,
             "max_tokens": 2000,
         }
-        response = requests.post(self.API_URL, json=payload, headers=self.headers, timeout=120)
+        response = requests.post(self.API_URL, json=payload, headers=self.headers, timeout=45)
         response.raise_for_status()
         data = response.json()
         content = ((data.get("choices") or [{}])[0].get("message") or {}).get("content", "")
@@ -88,8 +88,19 @@ class MitigationAgent:
     def _generate_with_model(self, prompt):
         if not self.model:
             raise RuntimeError("No LLM provider configured")
-        with _GENAI_LOCK:
+        if self.provider == "openrouter":
+            # Stateless per-instance HTTP client; no shared state to guard.
             return self.model.generate_content(prompt)
+        # genai.configure mutates process-global SDK state, so Gemini calls
+        # must be serialized across concurrent profiles/threads. Bound the
+        # wait so requests degrade to rule-based fallback instead of
+        # queueing past Vercel's 60s function deadline.
+        if not _GENAI_LOCK.acquire(timeout=15):
+            raise RuntimeError("LLM busy — another analysis is in flight")
+        try:
+            return self.model.generate_content(prompt, request_options={"timeout": 45})
+        finally:
+            _GENAI_LOCK.release()
 
     def generate_sprint_mitigation_plan(self, sprints):
         mitigations = []
