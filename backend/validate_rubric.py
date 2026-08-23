@@ -332,6 +332,15 @@ def run():
     cold = eng.detect_scope_creep(sprint, [_issue("PFIN-1", "In Progress", 9, 4)], cold_ctx)
     results.append(check("Scope: needs >=2 history points before judging", len(cold), 0, tol=0))
 
+    # Added-issue path: new key absent from the baseline issue map must
+    # trigger without raising (regression: NameError in `added` builder).
+    add_ctx = {"scope_baseline": {"total_sp": 3, "issues": {}, "captured_at": "2026-01-01T09:00:00"},
+               "scope_history": [3, 5]}
+    added_risk = eng.detect_scope_creep(sprint, [_issue("PFIN-9", "In Progress", 5, 4)], add_ctx)
+    results.append(check("Scope: post-baseline added issue triggers risk",
+                         1 if added_risk and added_risk[0]["type"] == "SCOPE_CREEP"
+                         and added_risk[0]["added_issues"][0]["key"] == "PFIN-9" else 0, 1, tol=0))
+
     src_main = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "main.py")).read()
     captures = "baselines[name] = {" in src_main and "late_capture" in src_main
     persists = '"scope_meta": scope_meta' in src_main.replace("'", '"') or 'scope_meta=scope_meta' in src_main

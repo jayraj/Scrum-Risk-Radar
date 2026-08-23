@@ -539,7 +539,11 @@ class RiskEngine:
             if issue.get("key")
         }
         added = [
-            {"key": key, "summary": issue.get("summary"), "sp": current_by_key[key]}
+            {
+                "key": issue["key"],
+                "summary": issue.get("summary"),
+                "sp": current_by_key[issue["key"]],
+            }
             for issue in issues
             if issue.get("key") and issue["key"] not in baseline_issues
         ]
