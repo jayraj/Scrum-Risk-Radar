@@ -75,7 +75,10 @@ export default function NextSprintOverview({ syncIntervalSeconds, refreshKey = 0
       )}
 
       {!loading && projects.length === 0 && (
-        <div className="no-data">✅ No upcoming sprint scheduled.</div>
+        <div className="no-data no-data-soft">
+          ✅ No upcoming sprints in Jira. Follow N+1 planning to identify risks early.
+        </div>
+        
       )}
     </div>
   )

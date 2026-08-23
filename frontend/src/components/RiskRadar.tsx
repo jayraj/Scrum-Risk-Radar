@@ -131,7 +131,7 @@ export default function RiskRadar({ syncIntervalSeconds, refreshKey = 0 }: RiskR
       )}
 
       {radarData.length === 0 && !loading && (
-        <div className="no-data">
+        <div className="no-data no-data-soft">
           ✅ There are currently no active sprints running in Jira. Once you start a sprint, it will appear here.
         </div>
       )}

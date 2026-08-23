@@ -723,6 +723,14 @@ body {
   padding: 40px 16px; /* page-level states get more breathing room */
 }
 
+/* Soft-bordered callout variant for section-level empty states */
+.no-data-soft {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  box-shadow: var(--shadow-subtle);
+}
+
 /* ---------- radar ---------- */
 .smooth-banner {
   background: linear-gradient(135deg, #d1fae5, #a7f3d0);
