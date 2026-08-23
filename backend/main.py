@@ -32,7 +32,7 @@ _IS_PROD = (
 )
 
 app = FastAPI(
-    title="PORTFOLIO RISK RADAR API",
+    title="AgileComrade API",
     version="3.0.0",
     description="Multi-scrum-master SaaS API (profiles in Supabase, serverless on Vercel)",
     docs_url=None if _IS_PROD else "/docs",
@@ -323,7 +323,7 @@ def _get_or_refresh_snapshot(row: dict):
 @app.get("/")
 def index():
     return {
-        "name": "Sprint Risk Radar API",
+        "name": "AgileComrade API",
         "version": "3.0.0",
         "status": "running",
         "endpoints": [

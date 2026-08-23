@@ -1,4 +1,4 @@
-# Deployment Guide — Sprint Risk Radar v2
+# Deployment Guide — AgileComrade
 
 Deploy the monorepo as **two independent Vercel projects** (backend API +
 frontend SPA). Both are deployed from the same Git repository using Vercel's

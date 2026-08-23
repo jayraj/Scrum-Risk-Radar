@@ -1,6 +1,6 @@
 # System Guidelines
 
-Rules and guidelines to follow when generating code for the PORTFOLIO RISK RADAR app.
+Rules and guidelines to follow when generating code for the AgileComrade app.
 
 # General guidelines
 

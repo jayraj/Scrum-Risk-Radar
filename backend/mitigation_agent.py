@@ -39,7 +39,7 @@ class OpenRouterModel:
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
             "HTTP-Referer": "https://sprint-risk-radar.vercel.app",
-            "X-Title": "Sprint Risk Radar",
+            "X-Title": "AgileComrade",
         }
 
     def generate_content(self, prompt):

@@ -23,7 +23,10 @@ export default function TopStrip({
     <header className="top-strip">
       <Link to="/" className="strip-brand" aria-label="Go to home">
         <Radar size={24} className="strip-brand-icon" />
-        <span className="strip-brand-name">PORTFOLIO RISK RADAR</span>
+        <span className="strip-brand-text">
+          <span className="strip-brand-name">AgileComrade</span>
+          <span className="strip-brand-tagline">Your sprint companion</span>
+        </span>
       </Link>
 
       <div className="top-strip-actions">

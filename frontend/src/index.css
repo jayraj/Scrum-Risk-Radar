@@ -285,6 +285,19 @@ body {
   color: #f9fafb;
 }
 
+.strip-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.strip-brand-tagline {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--color-primary-300);
+}
+
 .settings-btn {
   margin-left: auto;
 }
@@ -1788,7 +1801,7 @@ body {
 @media (max-width: 560px) {
   /* Icon-only brand keeps the strip on one line so the settings
      button never crops on narrow phones. */
-  .strip-brand-name {
+  .strip-brand-text {
     display: none;
   }
 

@@ -1,4 +1,4 @@
-# PORTFOLIO RISK RADAR — Multi-Scrum-Master SaaS
+# AgileComrade — Multi-Scrum-Master SaaS
 
 React (TypeScript) frontend + FastAPI backend. Each scrum master configures their
 own Jira Cloud workspace and LLM provider in a Settings screen; the backend stores

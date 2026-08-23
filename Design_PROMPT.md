@@ -1,8 +1,8 @@
-# Sprint Risk Radar v2 — Responsive Layout Design Prompt
+# AgileComrade — Responsive Layout Design Prompt
 
 ## Objective
 
-Transform the current Sprint Risk Radar web app from a single full-width purple top
+Transform the current AgileComrade web app from a single full-width purple top
 bar into a **responsive dashboard layout**: a dark **left hamburger sidebar** for
 navigation plus a slim dark **utility strip** on top. Light content area.
 
