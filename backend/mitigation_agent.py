@@ -349,7 +349,7 @@ Rules:
             text = response.text.strip()
             if alias:
                 # Restore the real name locally; the pseudonym never ships.
-                text = re.sub(rf"\b{re.escape(alias)}\b", real_assignee, text)
+                text = restore_aliases(text, {real_assignee: alias})
             message = self._linkify_issue_keys(text)
             return {
                 "message": message,

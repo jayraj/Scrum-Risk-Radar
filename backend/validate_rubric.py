@@ -293,7 +293,7 @@ def run():
                          1 if "bob@corp.com" not in scrubbed and "[email]" in scrubbed else 0, 1, tol=0))
     src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mitigation_agent.py")).read()
     wired = src.count("sanitize_issue_for_prompt(") >= 2  # sprint + next-sprint prompt builders
-    restored = "re.sub" in src and "re.escape(alias)" in src
+    restored = src.count("restore_aliases(") >= 2  # followup + sprint-plan/report restores
     deep = "deep_pseudonymize(risks[:5]" in src and "deep_pseudonymize(mitigations[:5]" in src
     results.append(check("Privacy: sanitization wired at all prompt sites + followup restore + report deep-scan",
                          1 if (wired and restored and deep) else 0, 1, tol=0))

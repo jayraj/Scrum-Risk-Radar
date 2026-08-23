@@ -8,7 +8,7 @@ Rules and guidelines to follow when generating code for the PORTFOLIO RISK RADAR
 - Use plain, named CSS classes in `frontend/src/index.css` — do **not** use Tailwind utility classes, even though Tailwind is installed.
 - Keep components in `frontend/src/components/` (one component per file) and helpers in `frontend/src/utils/format.ts`.
 - Reuse existing UI components and CSS classes; don't duplicate styles or components.
-- Icons are lucide-react (`strokeWidth={2}` default): 16px (`.icon-sm`) inside buttons, 20px (`.icon-md`) inline, 24px (`.icon-lg`) for section titles. Default color `#52525b`; standalone icons may sit in `.icon-container`. Emojis are acceptable for UI labels/titles.
+- Icons are lucide-react (`strokeWidth={2}` default) sized via the `size` prop: 16 inside buttons, 20 inline, 24 for section titles. Default color `#52525b`. Emojis are acceptable for UI labels/titles.
 - After any change, run `npm run lint && npm run build` in `frontend/`; backend changes must pass `python3 validate_rubric.py` in `backend/`.
 - Backend risk data flows through `backend/risk_engine.py`, `backend/snapshot.py`, and the frontend `Blocker` type in `frontend/src/api/client.ts`.
 
@@ -56,21 +56,20 @@ Buttons trigger actions (sync, scan, mitigate, draft, navigate). Labels are shor
 - All buttons follow the guide states: hover color shift, active darken, visible focus ring, disabled ≥0.6 opacity + `cursor: not-allowed`.
 
 ### Risk card
-Structure: `.risk-header` (risk-score badge + `.issue-key`), `.risk-body` (`.summary` with optional `.sprint-dates`, `.risk-type`, `.sprint-meta`, `.sprint-day`), `.risk-footer` (`.issue-types` chips + action button).
+Structure: `.risk-header` (risk-score badge + `.issue-key`), `.risk-body` (`.summary` with optional `.sprint-dates`, `.risk-type`, `.sprint-meta`, `.sprint-day`), `.risk-footer` (action button).
 
 ### Risk table (severity-filtered)
 - Tabs: `.risk-tabs` → `.risk-tab` (muted), `.risk-tab.active` (primary-blue text + blue 2px bottom border).
-- Table: `.risk-table` styled to the table tokens (bordered wrapper, radius 8, subtle shadow, `--table-header-bg` header band, zebra rows `--table-alt-row-bg`, hover `--table-hover-bg`); rows stay CSS-grid based for expandable rows (5-col default, `.six-col` variant).
-- Each row: `.risk-row-main` (`.risk-dot` pulsing for CRITICAL/MEDIUM + `.risk-row-title` with `.blocker-key` + `.risk-row-summary`), then `.risk-row-cat`, `.risk-row-sev`, `.risk-row-detect`, `.risk-row-stories`, `.risk-row-status`.
+- Table: `.risk-table` styled to the table tokens (bordered wrapper, radius 8, subtle shadow, `--table-header-bg` header band, zebra rows `--table-alt-row-bg`, hover `--table-hover-bg`); rows stay CSS-grid based for expandable rows (5-col default).
+- Each row: `.risk-row-main` (`.risk-dot` pulsing for CRITICAL/MEDIUM + `.risk-row-title` with `.blocker-key` + `.risk-row-summary`), then `.risk-row-cat`, `.risk-row-detect`, `.risk-row-stories`, `.risk-row-status`.
 - Status labels by severity: CRITICAL/HIGH → `ACTIVE` (severity color), MEDIUM → `MONITORING` (amber), LOW → `MITIGATED` (green).
 - Expanding a row shows `.risk-row-expand` with the AI mitigation strategy recommendation.
-- Generic semantic tables (if any) should use the `.table-wrapper` classes from the design system.
 
 ### Breadcrumb
 `.breadcrumb` → `Link` / `.breadcrumb-link-btn` / `.breadcrumb-sep` ( `/` ) / `.breadcrumb-current`; links use `--color-primary-600`.
 
 ### Other
 - Badges: `.risk-type-badge.critical/.high/.medium/.low` (tinted backgrounds matching severity families).
-- Chips: `.risk-chip` (mitigation), `.type-chip` (card issue types, primary-tinted).
+- Chips: `.risk-chip` (mitigation).
 - Empty states: `.empty-cell` (✅ no blockers) and `.risk-table-empty`.
 - Home tabs: `.home-tab-bar` / `.home-tab` / `.home-tab.active`.
