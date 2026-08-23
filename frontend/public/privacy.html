@@ -70,20 +70,25 @@
 
   <main>
     <div class="notice">
-      ⚠️ <strong>MVP / demo software.</strong> PORTFOLIO RISK RADAR is provided as-is for evaluation.
-      Don't connect Jira workspaces containing sensitive or regulated data until a formal data
-      protection agreement is in place.
+      ⚠️ <strong>MVP / demo software.</strong> Sprint Risk Radar is an MVP decision-support tool
+      for Scrum Masters and Delivery Managers: it surfaces potential delivery risks early so teams
+      can investigate and act sooner. AI results are signals, not guarantees — they may contain
+      false positives, miss risks, or lack context.
     </div>
 
     <p><em>Last updated: August 2026</em></p>
 
     <h2>1. What we store</h2>
     <div class="card">
+      <p>Your profile lives in Supabase and contains:</p>
       <ul>
-        <li><strong>Your connection profile:</strong> profile slug, Jira Cloud URL, your Jira email, project keys and LLM preferences in a single database row (hosted on Supabase).</li>
-        <li><strong>Secrets encrypted:</strong> your Jira API token and LLM API key are stored AES-GCM encrypted at rest. Your dashboard access token is kept only in your browser; the server stores just its SHA-256 hash.</li>
-        <li><strong>Cached sprint snapshot:</strong> issue keys, summaries, descriptions, statuses, story points, assignee names and sprint dates fetched from your Jira workspace, so dashboards load fast.</li>
+        <li><strong>Connection profile:</strong> profile slug, Jira Cloud URL, Jira email, project keys and LLM preferences.</li>
+        <li><strong>Cached sprint snapshot:</strong> issue keys, summaries, truncated descriptions (~500 characters), statuses, story points, assignee names, sprint dates, burndown history, and per-sprint scope baselines (issue-key → points maps).</li>
+        <li><strong>Cached AI analyses:</strong> generated mitigation plans are stored with the snapshot until regenerated or deleted.</li>
       </ul>
+      <p>Your Jira API token and LLM API key are encrypted at rest (<code>AES-GCM</code>).
+      Your dashboard access token stays in your browser only — the server keeps just its SHA-256 hash.</p>
+      <p>Everything above is deleted when you remove the profile in Settings.</p>
     </div>
 
     <h2>2. Where your data goes</h2>
@@ -91,18 +96,18 @@
       <tr><th>Service</th><th>Purpose</th><th>Data involved</th></tr>
       <tr>
         <td>Atlassian Jira Cloud</td>
-        <td>Reads sprint &amp; issue data with <em>your own</em> API credentials</td>
-        <td>Read-only API access to projects you configure</td>
+        <td>Read sprint &amp; issue data</td>
+        <td>Read-only access to configured projects</td>
       </tr>
       <tr>
-        <td>Gemini or OpenRouter (your choice)</td>
-        <td>AI risk analysis &amp; mitigation drafts</td>
-        <td>Issue text with assignees replaced by pseudonyms (<code>dev-01</code>, <code>dev-02</code>…) — including names mentioned inside free text such as summaries and recommendations — and email addresses scrubbed. Fresh pseudonyms per request.</td>
+        <td>Your configured AI provider</td>
+        <td>Risk analysis &amp; drafts</td>
+        <td>Relevant sprint/issue data (see section 3)</td>
       </tr>
       <tr>
         <td>Supabase</td>
-        <td>Encrypted profile storage</td>
-        <td>Profile row described above</td>
+        <td>Profile &amp; cache storage</td>
+        <td>Profile data, encrypted secrets, cached snapshot</td>
       </tr>
       <tr>
         <td>Vercel</td>
@@ -110,44 +115,60 @@
         <td>Standard request logs</td>
       </tr>
     </table>
+    <p>You choose the AI provider and model in Settings (e.g., Gemini or OpenRouter).</p>
 
-    <h2>3. What never happens</h2>
+    <h2>3. Data sent to AI providers</h2>
+    <div class="card">
+      <p>When you trigger an analysis we send relevant Jira data: issue keys, summaries,
+      truncated descriptions (~500 characters), statuses, story points, sprint info, and
+      aggregated sprint metrics (burndown gaps, velocity).</p>
+      <ul>
+        <li>Assignees are pseudonymized freshly for each request (John Smith → <code>dev-01</code>).</li>
+        <li>Email addresses are scrubbed before analysis.</li>
+      </ul>
+      <div class="notice" style="margin-bottom:0">
+        <strong>Important:</strong> pseudonymization is not anonymization — names, customer information
+        or other sensitive details may still appear inside free text (summaries/descriptions) and reach
+        your chosen provider. Third-party AI providers have their own data-use, retention and training
+        policies that vary by service, model and plan — this app cannot control or override them.
+        Review your provider's current terms before enabling AI analysis; if your organization forbids
+        sending Jira data to external AI services, leave AI analysis off for that workspace.
+      </div>
+    </div>
+
+    <h2>4. What we don't do</h2>
     <div class="card">
       <ul>
-        <li>The app <strong>never writes to your Jira workspace</strong> — it is strictly read-only. Follow-up messages are generated for you to copy &amp; paste manually.</li>
-        <li>Real teammate names and email addresses are <strong>not sent to AI providers</strong>. AI responses reference pseudonyms only; your app maps them back to real names <em>locally</em> before display.</li>
-        <li>We don't sell data, add analytics trackers, or require more Jira scope than reading sprints/issues.</li>
+        <li>We never write to your Jira workspace — access is strictly read-only. We never create, modify, transition or delete issues.</li>
+        <li>AI-generated follow-up messages are drafts for you to review and copy &amp; paste manually.</li>
+        <li>We don't send real assignee names as identifiers, don't send email addresses, don't sell data, and keep no analytics trackers.</li>
+        <li>We request only the Jira permissions required to read the configured sprint/issue data.</li>
       </ul>
     </div>
 
-    <h2>4. Retention &amp; your controls</h2>
+    <h2>5. AI accuracy &amp; third-party providers</h2>
+    <div class="card">
+      <p>Sprint Risk Radar is an MVP, not an authoritative risk-prediction system: flagged items
+      may not be real risks, and real risks may go undetected. Treat results as
+      <em>surface → investigate → apply your delivery judgment → act if warranted</em>.
+      Your professional judgment remains the final authority.</p>
+      <p>Providers differ in how they handle submitted data (e.g., Gemini's free vs. paid tiers;
+      OpenRouter routing to third-party models with varying retention/training policies —
+      prefer no-training / zero-data-retention options where available for real workspaces).</p>
+    </div>
+
+    <h2>6. Retention &amp; your controls</h2>
     <div class="card">
       <ul>
-        <li>Your profile and cached sprint data are kept <strong>until you delete the profile</strong> in Settings — deletion removes the database row immediately.</li>
-        <li>You can edit or delete your profile anytime from the ⚙️ Settings page.</li>
-        <li>AI analysis happens only when you trigger it; results are returned to your browser.</li>
+        <li>Edit or delete your profile anytime from ⚙️ Settings — deletion removes the database row and all cached data immediately.</li>
+        <li>AI analysis runs only when you explicitly trigger it; results are returned to your browser and cached with the snapshot until regenerated or deleted.</li>
+        <li>Deleting your profile doesn't retract data already submitted to a third-party AI provider, which remains subject to that provider's retention policies.</li>
       </ul>
     </div>
 
-    <h2>5. Third-party AI caveat</h2>
+    <h2>7. Contact</h2>
     <div class="card">
-      <p>Even with pseudonymization, prompts may contain your organization's issue titles and text.
-      Data handling differs significantly by provider and plan:</p>
-      <ul>
-        <li><strong>Gemini (free tier):</strong> Google may use submitted prompts to improve its products.
-          If that is unacceptable for your workspace, use a <strong>paid-tier Gemini API key</strong>, where
-          submitted data is not used for training.</li>
-        <li><strong>OpenRouter:</strong> requests are routed to third-party models with varying retention
-          and training policies. Prefer providers advertising a no-training / zero-data-retention policy,
-          which can be filtered in the OpenRouter dashboard.</li>
-        <li>In all cases, review your provider's current data-use terms before enabling AI features on
-          real workspaces — this app cannot override provider-side retention.</li>
-      </ul>
-    </div>
-
-    <h2>6. Contact</h2>
-    <div class="card">
-      <p>Questions or deletion requests: <strong><a href="mailto:jaybhatta@yahoo.com">jaybhatta@yahoo.com</a></strong></p>
+      <p>Privacy questions or deletion requests: <strong><a href="mailto:jaybhatta@yahoo.com">jaybhatta@yahoo.com</a></strong></p>
     </div>
   </main>
 
