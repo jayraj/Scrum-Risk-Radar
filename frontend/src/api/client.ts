@@ -213,6 +213,14 @@ export interface Snapshot {
   summary: RiskSummary
   mitigations: Mitigation[]
   burndown_history: Record<string, number[]>
+  scope_meta?: {
+    baselines: Record<string, { total_sp: number; captured_at: string; manual?: boolean }>
+    history: Record<string, number[]>
+  }
+  sprint_data?: Record<
+    string,
+    { sprint?: { name?: string }; issues?: Array<{ key?: string; summary?: string; assignee?: string }> }
+  >
   last_sync: string | null
 }
 

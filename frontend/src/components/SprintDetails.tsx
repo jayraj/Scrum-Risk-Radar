@@ -53,6 +53,16 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
   const sprintMitigation = mitigations.find((m) => m.sprint_key === resolvedName) || null
   const planVisible = !!resolvedName && planRequestedFor === resolvedName
 
+  // Live issue summaries from the synced sprint data, so every row in the
+  // risk table can show its ticket summary even if the blocker payload
+  // omits one.
+  const summaryByKey = new Map<string, string>()
+  for (const data of Object.values(snapshot?.sprint_data ?? {})) {
+    for (const issue of data.issues ?? []) {
+      if (issue.key && issue.summary) summaryByKey.set(issue.key, issue.summary)
+    }
+  }
+
   const generateMitigations = async () => {
     if (!resolvedName) return
     setGenerating(true)
@@ -225,9 +235,12 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
                           />
                           <span className="risk-row-title">
                             <span className="blocker-key">{riskTitle(blocker)}</span>
-                            {blocker.summary && blocker.summary !== riskTitle(blocker) && (
-                              <span> {blocker.summary}</span>
-                            )}
+                            {(() => {
+                              const summary = summaryByKey.get(blocker.issue_key ?? '') || blocker.summary || ''
+                              return summary && summary !== riskTitle(blocker) ? (
+                                <span className="risk-row-summary">{summary}</span>
+                              ) : null
+                            })()}
                           </span>
                         </div>
                         <span className="risk-row-cat">{formatRiskType(blocker.type)}</span>
