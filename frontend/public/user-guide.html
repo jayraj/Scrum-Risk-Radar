@@ -92,7 +92,8 @@
     <ul>
       <li><strong>Severity tabs</strong> (ALL / CRITICAL / HIGH / MEDIUM / LOW) filter the blockers table.</li>
       <li>Each row shows category, severity, detection reason, affected stories and live status. Click a row to expand its AI mitigation strategy.</li>
-      <li><strong>Mitigate with AI →</strong> generates a full action plan (owner, timeline, success criteria).</li>
+      <li><strong>Mitigate with AI →</strong> generates a full action plan (owner, timeline, success criteria). Plans reference teammates by name — the AI itself only ever sees pseudonyms.</li>
+      <li>If your LLM provider is unreachable, the plan is generated from built-in rules and an amber banner (<strong>⚠️ Rule-based fallback — may be less relevant than AI-generated plans.</strong>) appears above it.</li>
       <li><strong>💬 Draft Message</strong> writes a polite follow-up for the assignee. Hit 📋 Copy and paste it into the Jira ticket yourself — the app never posts to Jira.</li>
     </ul>
 
@@ -123,7 +124,7 @@
       <tr><th>Symptom</th><th>Fix</th></tr>
       <tr><td>"No active current sprints"</td><td>Start/schedule a sprint in Jira for the configured projects, then Sync Now.</td></tr>
       <tr><td>AI analysis fails or is slow</td><td>LLM calls are capped ~45s; if the provider times out the app falls back to rule-based results automatically. Retry or check your LLM key.</td></tr>
-      <tr><td>"Rule-based fallback" label</td><td>AI was unavailable — scores come from the deterministic engine; safe to use.</td></tr>
+      <tr><td>"Rule-based fallback" label / amber warning above the plan</td><td>AI was unavailable — the mitigation plan comes from built-in rules and may be less specific. Check your LLM key in Settings and retry with Mitigate with AI.</td></tr>
       <tr><td>Story points show 0</td><td>Your Jira uses a custom field. Set it in Settings (<code>customfield_10102</code>-style); Test Connection verifies it.</td></tr>
       <tr><td>Test Connection project ❌</td><td>Check the project key spelling and that your Jira account can browse that project.</td></tr>
     </table>

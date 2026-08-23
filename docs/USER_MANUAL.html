@@ -154,7 +154,7 @@ and API key come from Settings (§1).</p>
   <tr>
     <td><strong>Mitigate with AI</strong></td>
     <td>Sprint details page</td>
-    <td>Analyzes every blocker in the sprint and writes an <strong>AI MITIGATION PLAN</strong> — concrete actions per risk category.</td>
+    <td>Analyzes every blocker in the sprint and writes an <strong>AI MITIGATION PLAN</strong> — concrete actions per risk category. If the LLM provider is unreachable, a rule-based plan is generated instead and an amber banner (<strong>⚠️ Rule-based fallback — may be less relevant than AI-generated plans.</strong>) appears above it.</td>
   </tr>
   <tr>
     <td><strong>⚡ AI Mitigation Strategy</strong></td>
@@ -180,6 +180,10 @@ and API key come from Settings (§1).</p>
 <div class="note"><strong>Graceful degradation:</strong> detection and scoring are pure rules and work
 without any AI key. Only drafts, mitigation plans and reports need the LLM — and those fall back to
 clear error messages if the provider fails.</div>
+<div class="note"><strong>🔒 Privacy:</strong> nothing that leaves for the AI provider contains real
+teammate names or email addresses — assignees travel as pseudonyms (<code>dev-01</code>, <code>dev-02</code>…)
+and are mapped back to real names locally before anything is displayed. Full details:
+<a href="../frontend/public/privacy.html">Privacy Notice</a>.</div>
 
 <footer>PORTFOLIO RISK RADAR · Developer setup &amp; deployment: see <a href="../README.md">README.md</a></footer>
 

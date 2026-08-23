@@ -4,6 +4,7 @@ Usage:  python validate_rubric.py
 Each example is reconstructed as synthetic sprint/ticket data and the produced
 scores are asserted with a small tolerance (scores are rounded ints).
 """
+import json
 import os
 from datetime import datetime, timedelta
 
@@ -296,6 +297,33 @@ def run():
     deep = "deep_pseudonymize(risks[:5]" in src and "deep_pseudonymize(mitigations[:5]" in src
     results.append(check("Privacy: sanitization wired at all prompt sites + followup restore + report deep-scan",
                          1 if (wired and restored and deep) else 0, 1, tol=0))
+
+    # Round-trip: no real names leave for the LLM; aliases restore exactly.
+    from prompt_privacy import deep_scrub_text, deep_pseudonymize, restore_aliases
+
+    rt_mapping = {}
+    rt_risks = [
+        {"type": "STORY_NOT_PROGRESSING", "issue_key": "MOS-1", "assignee": "Sarah Chen",
+         "recommendation": "Check with Sarah Chen for blockers on MOS-1."},
+        {"type": "BURNDOWN_BEHIND", "issue_key": None, "assignee": "Ravi Patel",
+         "recommendation": "Ping Ravi about scope. Escalate to bob@corp.com."},
+    ]
+    rt_clean = deep_scrub_text(deep_pseudonymize(rt_risks, rt_mapping), rt_mapping)
+    rt_json = json.dumps(rt_clean)
+    rt_ok = ("Sarah Chen" not in rt_json and "Ravi Patel" not in rt_json
+             and "bob@corp.com" not in rt_json and "dev-01" in rt_json and "dev-02" in rt_json)
+    results.append(check("Privacy: risks prompt payload carries zero real names/emails",
+                         1 if rt_ok else 0, 1, tol=0))
+    sample_out = "dev-01 should pair with dev-02 today; DEV-01 owns follow-up."
+    rt_back = restore_aliases(sample_out, rt_mapping)
+    rt_restore_ok = ("Sarah Chen" in rt_back and "Ravi Patel" in rt_back
+                     and "dev-01" not in rt_back and "dev-02" not in rt_back)
+    results.append(check("Privacy: alias restore is case-insensitive and complete",
+                         1 if rt_restore_ok else 0, 1, tol=0))
+    sprint_restored = "restore_aliases(response.text, prompt_mapping)" in src
+    report_restored = "restore_aliases(response.text, report_mapping)" in src
+    results.append(check("Privacy: sprint plan + stakeholder report restore real names before display",
+                         1 if (sprint_restored and report_restored) else 0, 1, tol=0))
 
     # ------------------------------------------------------------------ #
     # STORY_NOT_PROGRESSING (sprint-clamped staleness)

@@ -9,7 +9,13 @@ import google.generativeai as genai
 import requests
 
 from config import UserConfig
-from prompt_privacy import deep_pseudonymize, sanitize_issue_for_prompt, scrub_emails
+from prompt_privacy import (
+    deep_pseudonymize,
+    deep_scrub_text,
+    restore_aliases,
+    sanitize_issue_for_prompt,
+    scrub_emails,
+)
 
 # The google-generativeai SDK keeps API-key state process-global
 # (genai.configure); serialize init + calls to avoid cross-profile key races.
@@ -118,11 +124,13 @@ class MitigationAgent:
         project_key = sprint.get("project_key", "N/A")
         risks = sprint.get("risks", [])
         issues = sprint.get("issues", [])
-        prompt = self._build_sprint_prompt(sprint)
+        prompt, prompt_mapping = self._build_sprint_prompt(sprint)
 
         try:
             response = self._generate_with_model(prompt)
-            mitigation_text = response.text
+            # The LLM only ever sees pseudonyms; map them back to real names
+            # before display/extraction. raw_response keeps the alias-only text.
+            mitigation_text = restore_aliases(response.text, prompt_mapping)
 
             mitigation = {
                 "sprint_key": sprint_key,
@@ -137,7 +145,7 @@ class MitigationAgent:
                 "confidence": self._extract_confidence(mitigation_text) or max([r.get("confidence", 0) for r in risks], default=0),
                 "ai_mitigation_suggestion": mitigation_text,
                 "prompt": prompt,
-                "raw_response": mitigation_text,
+                "raw_response": response.text,
                 "ai_used": True,
                 "llm": self.get_model_info(),
                 "action_items": self._extract_action_items(mitigation_text),
@@ -219,8 +227,12 @@ class MitigationAgent:
         } for i in issues]
         prompt_mapping = {}
         sprint_issues = [sanitize_issue_for_prompt(i, prompt_mapping) for i in sprint_issues]
+        # Risks carry assignee keys AND free-text recommendations that can embed
+        # real names ("Check with John..."). Pseudonymize keys first (fills the
+        # shared map), then scrub every string value.
+        risks_for_prompt = deep_scrub_text(deep_pseudonymize(risks, prompt_mapping), prompt_mapping)
 
-        return f"""
+        prompt = f"""
 You are an expert Scrum Master/Project Manager. Analyze this sprint and its risks, then provide actionable mitigation strategies at the sprint level.
 
 Sprint: {sprint_key}
@@ -228,7 +240,7 @@ Project: {project_key}
 Number of Risks: {len(risks)}
 
 Risks:
-{json.dumps(risks, indent=2, default=str)}
+{json.dumps(risks_for_prompt, indent=2, default=str)}
 
 Sprint Tickets:
 {json.dumps(sprint_issues, indent=2, default=str)}
@@ -261,6 +273,7 @@ Rules:
 - Keep the plan concise and practical for a team standup.
 - Every section must be present, even if brief.
 """
+        return prompt, prompt_mapping
 
     def _extract_section(self, text, header):
         lines = text.split("\n")
@@ -408,11 +421,11 @@ Write a short, friendly follow-up message (2-4 sentences) to {assignee} asking f
 
     def analyze_next_sprint_risks(self, project_key, sprint, issues, rule_based_risks=None):
         rule_based_risks = rule_based_risks or []
-        prompt = self._build_next_sprint_risk_prompt(project_key, sprint, issues)
+        prompt, prompt_mapping = self._build_next_sprint_risk_prompt(project_key, sprint, issues)
 
         try:
             response = self._generate_with_model(prompt)
-            text = response.text.strip()
+            text = restore_aliases(response.text.strip(), prompt_mapping)
             raw_risks = self._extract_risk_list(text)
 
             info = self.get_model_info()
@@ -448,8 +461,9 @@ Write a short, friendly follow-up message (2-4 sentences) to {assignee} asking f
         } for i in issues]
         prompt_mapping = {}
         issue_list = [sanitize_issue_for_prompt(i, prompt_mapping) for i in issue_list]
+        issue_list = [deep_scrub_text(i, prompt_mapping) for i in issue_list]
 
-        return f"""
+        prompt = f"""
 You are an expert Scrum Master performing pre-planning risk analysis on an UPCOMING sprint.
 
 Sprint: {sprint_key}
@@ -489,6 +503,7 @@ Rules:
 - If no meaningful risks exist, return an empty array: []
 - Maximum 6 risks, ranked by risk_score descending.
 """
+        return prompt, prompt_mapping
 
     def _extract_risk_list(self, text):
         text = text.strip()
@@ -533,7 +548,7 @@ Make it suitable for a 5-minute stakeholder update. Be direct and actionable.
 
         try:
             response = self._generate_with_model(prompt)
-            return response.text
+            return restore_aliases(response.text, report_mapping)
         except Exception as e:
             logger.error(f"Error generating stakeholder report: {e}")
             return f"Unable to generate report. {len(risks)} risks detected, manual review required."
