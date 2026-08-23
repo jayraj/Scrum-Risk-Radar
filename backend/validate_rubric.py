@@ -338,6 +338,11 @@ def run():
     results.append(check("Scope: auto-baseline on first active sync persisted via snapshot",
                          1 if (captures and persists) else 0, 1, tol=0))
 
+    seeded = "scope-baseline" in src_main and '"manual": True' in src_main.replace("'", '"')
+    diag = "🔭 Scope[" in src_main
+    results.append(check("Scope: manual seed endpoint + per-sync diagnostic log",
+                         1 if (seeded and diag) else 0, 1, tol=0))
+
     # ------------------------------------------------------------------ #
     print("\n" + "=" * 40)
     passed = sum(results)
