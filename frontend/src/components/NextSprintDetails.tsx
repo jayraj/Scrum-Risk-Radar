@@ -139,14 +139,15 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
         )}
 
         {nextSprintRisks && nextSprintRisks.length > 0 && (() => {
-            const categories = Array.from(new Set(nextSprintRisks.map((r) => r.type)))
             const ticketRows = nextSprintRisks.flatMap((risk) => {
               const keys = risk.issue_keys?.length ? risk.issue_keys : risk.issue_key ? [risk.issue_key] : []
               if (!keys.length) return [{ risk, ticketKey: risk.sprint_key || risk.type }]
               return keys.map((ticketKey) => ({ risk, ticketKey }))
             })
             const filteredRows =
-              activeTab === 'ALL' ? ticketRows : ticketRows.filter((tr) => tr.risk.type === activeTab)
+              activeTab === 'ALL'
+                ? ticketRows
+                : ticketRows.filter((tr) => (tr.risk.severity || '').toUpperCase() === activeTab)
             return (
           <div>
             <div className="risk-summary">⚠️ {nextSprintRisks.length} early risk(s) found before planning</div>
@@ -154,12 +155,15 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
             <div className="risk-tabs">
               {[
                 { key: 'ALL', label: 'All' },
-                ...categories.map((c) => ({ key: c, label: formatRiskType(c) })),
+                { key: 'CRITICAL', label: 'Critical' },
+                { key: 'HIGH', label: 'High' },
+                { key: 'MEDIUM', label: 'Medium' },
+                { key: 'LOW', label: 'Low' },
               ].map((tab) => {
                 const count =
                   tab.key === 'ALL'
                     ? nextSprintRisks.length
-                    : nextSprintRisks.filter((r) => r.type === tab.key).length
+                    : nextSprintRisks.filter((r) => (r.severity || '').toUpperCase() === tab.key).length
                 return (
                   <button
                     key={tab.key}
@@ -175,7 +179,7 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
             <div className="risk-table four-col">
               <div className="risk-table-header">
                 <span>Risk</span>
-                <span>Severity</span>
+                <span>Category</span>
                 <span>Assignee</span>
                 <span>Status</span>
               </div>
@@ -202,9 +206,7 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
                             <span className="risk-row-summary">{summaryByKey.get(ticketKey) || ''}</span>
                           </span>
                         </div>
-                        <span className="risk-row-sev" style={{ color: severityColor(risk.severity) }}>
-                          {severity}
-                        </span>
+                        <span className="risk-row-cat">{formatRiskType(risk.type)}</span>
                         <span className="risk-row-detect">{assignee}</span>
                         <span className="risk-row-status" style={{ color: status.color }}>
                           {status.label}
@@ -222,7 +224,7 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
                   )
                 })}
                 {filteredRows.length === 0 && (
-                  <div className="risk-table-empty">No {formatRiskType(activeTab)} risks in this sprint.</div>
+                  <div className="risk-table-empty">No {activeTab.toLowerCase()} risks found before planning.</div>
                 )}
               </div>
             </div>
