@@ -110,6 +110,7 @@ export const formatRiskType = (type: string): string => {
     SIZING_RISK: '🏗️ Oversized',
     DUE_DATE_PASSED: '⏰ Due Date Passed',
     BUG_RAISED: '🐛 Bug Raised',
+    SCOPE_CREEP: '📈 Scope Creep',
   }
   return map[type] || type
 }

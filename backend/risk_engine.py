@@ -46,9 +46,12 @@ class RiskEngine:
     # ------------------------------------------------------------------ #
     # Orchestrator
     # ------------------------------------------------------------------ #
-    def calculate_all_risks(self, sprint_data, velocity_data=None, burndown_history=None):
+    def calculate_all_risks(self, sprint_data, velocity_data=None, burndown_history=None, scope_meta=None):
         risks = []
         burndown_history = burndown_history or {}
+        scope_meta = scope_meta or {}
+        baselines = scope_meta.get("baselines") or {}
+        scope_history = scope_meta.get("history") or {}
 
         for project_key, data in sprint_data.items():
             sprint = data["sprint"]
@@ -59,6 +62,8 @@ class RiskEngine:
                 "blocking_map": is_blocking_map(issues),
                 "qa_throughput": self._qa_throughput(velocity_data, project_key),
                 "burndown_history": burndown_history.get(sprint.get("name")) if sprint else None,
+                "scope_baseline": baselines.get(sprint.get("name")) if sprint else None,
+                "scope_history": scope_history.get(sprint.get("name")) if sprint else None,
             }
 
             risks.extend(self.detect_story_progress_risks(issues, context))
@@ -67,6 +72,7 @@ class RiskEngine:
             risks.extend(self.detect_external_dependencies(issues, context))
             risks.extend(self.detect_due_date_risks(sprint, issues, context))
             risks.extend(self.detect_bug_risks(sprint, issues, context))
+            risks.extend(self.detect_scope_creep(sprint, issues, context))
 
         return sorted(risks, key=lambda x: x["raw_score"], reverse=True)
 
@@ -496,6 +502,95 @@ class RiskEngine:
                 "severity": bucket_severity(score),
                 "recommendation": recommendation,
             })
+
+        return risks
+
+    # ------------------------------------------------------------------ #
+    # 7. SCOPE_CREEP (sprint-level, vs first-active-sync baseline)
+    # ------------------------------------------------------------------ #
+    def detect_scope_creep(self, sprint, issues, context=None):
+        """Flag scope added or re-estimated upward after sprint start.
+
+        The baseline (total SP + per-issue SP map) is captured automatically
+        on the first sync while the sprint is active — that is treated as the
+        planning commitment. Growth beyond settings.scope_creep_min_growth_pct,
+        any issue added post-baseline, or any estimate hike triggers the risk.
+        Requires at least two scope history points so single-sync noise and
+        future sprints (no baseline) are skipped.
+        """
+        risks = []
+        context = context or {}
+        name = sprint.get("name") if sprint else None
+        if not name:
+            return risks
+
+        baseline = context.get("scope_baseline")
+        history = context.get("scope_history") or []
+        if not baseline or len(history) < 2:
+            return risks
+
+        current_sp = sum(issue.get("story_points", 0) or 0 for issue in issues)
+        baseline_sp = float(baseline.get("total_sp") or 0)
+        baseline_issues = baseline.get("issues") or {}
+
+        current_by_key = {
+            issue.get("key"): (issue.get("story_points", 0) or 0)
+            for issue in issues
+            if issue.get("key")
+        }
+        added = [
+            {"key": key, "summary": issue.get("summary"), "sp": current_by_key[key]}
+            for issue in issues
+            if issue.get("key") and issue["key"] not in baseline_issues
+        ]
+        hiked = [
+            {"key": key, "from": base_sp, "to": current_by_key[key]}
+            for key, base_sp in baseline_issues.items()
+            if key in current_by_key and current_by_key[key] > (base_sp or 0)
+        ]
+
+        growth = ((current_sp - baseline_sp) / baseline_sp * 100) if baseline_sp > 0 else 0.0
+        min_growth = settings.scope_creep_min_growth_pct
+        if growth < min_growth and not added and not hiked:
+            return risks
+
+        # Pure additions/hikes with sub-threshold net growth still count as
+        # at least a threshold-level signal.
+        base = max(growth, min_growth) if (added or hiked) else growth
+        tp = time_pressure_multiplier(sprint)
+        raw = min(settings.scope_creep_cap, base) * tp
+        score = cap_score(raw)
+
+        parts = [f"Sprint scope grew {growth:.0f}% since planning ({baseline_sp:.0f} → {current_sp} SP)."]
+        if added:
+            keys = ", ".join(a["key"] for a in added[:3])
+            more = "" if len(added) <= 3 else f" (+{len(added) - 3} more)"
+            parts.append(f"{len(added)} issue(s) added after start ({keys}{more}).")
+        if hiked:
+            hikes_txt = ", ".join(f"{h['key']} {h['from']}→{h['to']}" for h in hiked[:3])
+            more = "" if len(hiked) <= 3 else f" (+{len(hiked) - 3} more)"
+            parts.append(f"Estimates raised: {hikes_txt}{more}.")
+        parts.append(
+            "Renegotiate scope with stakeholders or add capacity — do not "
+            "silently absorb the extra work."
+        )
+
+        risks.append({
+            "type": "SCOPE_CREEP",
+            "sprint_key": name,
+            "issue_keys": [a["key"] for a in added] + [h["key"] for h in hiked],
+            "baseline_sp": baseline_sp,
+            "current_sp": current_sp,
+            "growth_percent": round(growth, 1),
+            "added_issues": added,
+            "story_point_hikes": hiked,
+            "late_baseline": bool(baseline.get("late_capture")),
+            "risk_score": score,
+            "raw_score": round(raw, 1),
+            "confidence": 60 if baseline.get("late_capture") else 75,
+            "severity": bucket_severity(score),
+            "recommendation": " ".join(parts),
+        })
 
         return risks
 

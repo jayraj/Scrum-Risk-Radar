@@ -16,6 +16,7 @@ from config import UserConfig, settings
 from crypto import decrypt, encrypt, sha256_hex
 from jira_fetcher import JiraFetcher, fetch_all
 from mitigation_agent import MitigationAgent
+from risk_components import now_utc, to_utc
 from risk_engine import RiskEngine
 from snapshot import build_snapshot
 from supabase_store import DuplicateProfileError, SupabaseStore
@@ -208,6 +209,10 @@ def _refresh_snapshot(row: dict, config: UserConfig):
             return stale
 
     burndown_history = row.get("burndown_history") or {}
+    # Scope-creep state lives inside the persisted snapshot (no dedicated
+    # Supabase column): baselines captured at first active sync + SP trail.
+    prev_snapshot = row.get("snapshot") or {}
+    scope_meta = prev_snapshot.get("scope_meta") or {"baselines": {}, "history": {}}
 
     risk_engine = RiskEngine()
 
@@ -226,10 +231,47 @@ def _refresh_snapshot(row: dict, config: UserConfig):
         if len(history) > settings.burndown_history_size:
             del history[: len(history) - settings.burndown_history_size]
 
+    # Capture/extend scope-creep state for each ACTIVE sprint: baseline on
+    # first sight (the planning commitment), then append today's total SP.
+    now_iso = datetime.utcnow().isoformat()
+    now = now_utc()
+    for project_data in sprint_data.values():
+        sprint = project_data.get("sprint")
+        if not sprint or not sprint.get("name"):
+            continue
+        name = sprint["name"]
+        issues = project_data.get("issues", [])
+        total_sp = sum(i.get("story_points", 0) or 0 for i in issues)
+        baselines = scope_meta.setdefault("baselines", {})
+        if name not in baselines:
+            start = to_utc(sprint.get("startDate"))
+            late = bool(
+                start and (now - start).total_seconds() > settings.scope_baseline_grace_hours * 3600
+            )
+            baselines[name] = {
+                "total_sp": total_sp,
+                "issues": {
+                    i.get("key"): (i.get("story_points", 0) or 0)
+                    for i in issues
+                    if i.get("key")
+                },
+                "captured_at": now_iso,
+                "late_capture": late,
+            }
+            if late:
+                logger.info(f"📅 Late scope baseline for '{name}' ({total_sp} SP) — lower confidence.")
+            else:
+                logger.info(f"📅 Scope baseline captured for '{name}' ({total_sp} SP).")
+        trail = scope_meta.setdefault("history", {}).setdefault(name, [])
+        trail.append(total_sp)
+        if len(trail) > settings.scope_history_size:
+            del trail[: len(trail) - settings.scope_history_size]
+
     risks = risk_engine.calculate_all_risks(
         sprint_data,
         velocity_data=velocity_data,
         burndown_history=burndown_history,
+        scope_meta=scope_meta,
     )
 
     snapshot = build_snapshot(
@@ -240,6 +282,7 @@ def _refresh_snapshot(row: dict, config: UserConfig):
         burndown_history=burndown_history,
         mitigations=[],
         last_sync=datetime.utcnow().isoformat(),
+        scope_meta=scope_meta,
     )
 
     store.update_profile(row["slug"], {

@@ -333,7 +333,7 @@ def _build_delivery_health(sprint_data, next_sprint_data, velocity_data, risks, 
     return projects
 
 
-def build_snapshot(sprint_data, next_sprint_data, velocity_data, risks, burndown_history, mitigations, last_sync):
+def build_snapshot(sprint_data, next_sprint_data, velocity_data, risks, burndown_history, mitigations, last_sync, scope_meta=None):
     risk_engine = RiskEngine()
     lookup = _issue_to_sprint_lookup(sprint_data)
 
@@ -358,5 +358,6 @@ def build_snapshot(sprint_data, next_sprint_data, velocity_data, risks, burndown
         "next_sprint_data": next_sprint_data,
         "mitigations": mitigations,
         "burndown_history": burndown_history,
+        "scope_meta": scope_meta or {"baselines": {}, "history": {}},
         "last_sync": last_sync,
     }

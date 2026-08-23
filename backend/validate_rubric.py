@@ -7,6 +7,7 @@ scores are asserted with a small tolerance (scores are rounded ints).
 import os
 from datetime import datetime, timedelta
 
+from config import settings as _settings
 from risk_components import (
     STALE_HOURS,
     avg_sprint_sp,
@@ -16,6 +17,10 @@ from risk_components import (
 from risk_engine import RiskEngine
 
 eng = RiskEngine()
+
+
+def settings_scope_cap():
+    return _settings.scope_creep_cap
 
 
 def _iso(days_from_now):
@@ -291,6 +296,47 @@ def run():
     deep = "deep_pseudonymize(risks[:5]" in src and "deep_pseudonymize(mitigations[:5]" in src
     results.append(check("Privacy: sanitization wired at all prompt sites + followup restore + report deep-scan",
                          1 if (wired and restored and deep) else 0, 1, tol=0))
+
+    # ------------------------------------------------------------------ #
+    # SCOPE_CREEP
+    # ------------------------------------------------------------------ #
+    print("\nSCOPE_CREEP")
+    sprint = _sprint(2, 10)
+    # Planning committed 3 SP; after start PFIN-1 was re-estimated to 5 SP.
+    baseline = {
+        "total_sp": 3,
+        "issues": {"PFIN-1": 3},
+        "captured_at": "2026-01-01T09:00:00",
+        "late_capture": False,
+    }
+    context = {"scope_baseline": baseline, "scope_history": [3, 5]}
+    creep = eng.detect_scope_creep(sprint, [_issue("PFIN-1", "In Progress", 5, 4)], context)
+    if not creep:
+        raise AssertionError("SCOPE_CREEP: estimate hike 3->5 did not trigger")
+    c = creep[0]
+    expected_raw = min(settings_scope_cap(), ((5 - 3) / 3) * 100) * time_pressure_multiplier(sprint)
+    results.append(check("Scope: type + growth percent", 1 if c["type"] == "SCOPE_CREEP" and abs(c["growth_percent"] - 66.7) < 0.5 else 0, 1, tol=0))
+    results.append(check("Scope: score = min(cap, growth%) x time pressure", c["risk_score"], int(round(expected_raw)), tol=2))
+    results.append(check("Scope: full-confidence baseline", c["confidence"], 75, tol=0))
+
+    late_ctx = {"scope_baseline": dict(baseline, late_capture=True), "scope_history": [3, 5]}
+    late = eng.detect_scope_creep(sprint, [_issue("PFIN-1", "In Progress", 5, 4)], late_ctx)
+    results.append(check("Scope: late-captured baseline lowers confidence",
+                         late[0]["confidence"] if late else 0, 60, tol=0))
+
+    quiet_ctx = {"scope_baseline": baseline, "scope_history": [3, 3]}
+    quiet = eng.detect_scope_creep(sprint, [_issue("PFIN-1", "In Progress", 3, 4)], quiet_ctx)
+    results.append(check("Scope: no growth/hikes/additions => silent", len(quiet), 0, tol=0))
+
+    cold_ctx = {"scope_baseline": baseline}  # single sync so far
+    cold = eng.detect_scope_creep(sprint, [_issue("PFIN-1", "In Progress", 9, 4)], cold_ctx)
+    results.append(check("Scope: needs >=2 history points before judging", len(cold), 0, tol=0))
+
+    src_main = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "main.py")).read()
+    captures = "baselines[name] = {" in src_main and "late_capture" in src_main
+    persists = '"scope_meta": scope_meta' in src_main.replace("'", '"') or 'scope_meta=scope_meta' in src_main
+    results.append(check("Scope: auto-baseline on first active sync persisted via snapshot",
+                         1 if (captures and persists) else 0, 1, tol=0))
 
     # ------------------------------------------------------------------ #
     print("\n" + "=" * 40)

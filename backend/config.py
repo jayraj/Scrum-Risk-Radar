@@ -110,6 +110,11 @@ class Settings(BaseSettings):
     assignee_no_active_factor: float = 1.4
     blocking_factor: float = 1.3
     burndown_history_size: int = 8
+    # Scope-creep detection (baseline captured on first active-sprint sync)
+    scope_creep_min_growth_pct: float = 10.0
+    scope_creep_cap: float = 85.0
+    scope_history_size: int = 8
+    scope_baseline_grace_hours: int = 24  # later capture => lower confidence
 
     # Server / scheduler (scheduler removed for serverless)
     port: int = 5002
