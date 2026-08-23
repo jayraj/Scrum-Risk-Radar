@@ -66,7 +66,7 @@ class RiskEngine:
                 "scope_history": scope_history.get(sprint.get("name")) if sprint else None,
             }
 
-            risks.extend(self.detect_story_progress_risks(issues, context))
+            risks.extend(self.detect_story_progress_risks(sprint, issues, context))
             risks.extend(self.detect_burndown_risks(sprint, issues, context))
             risks.extend(self.detect_qa_bottleneck(sprint, issues, context))
             risks.extend(self.detect_external_dependencies(issues, context))
@@ -84,21 +84,32 @@ class RiskEngine:
     # ------------------------------------------------------------------ #
     # 1. STORY_NOT_PROGRESSING (ticket-level)
     # ------------------------------------------------------------------ #
-    def detect_story_progress_risks(self, issues, context=None):
+    def detect_story_progress_risks(self, sprint, issues, context=None):
+        """Flag tickets that have gone quiet DURING the current sprint.
+
+        Staleness is measured from max(last update, sprint start): silence
+        from before the sprint began (backlog-pulled tickets) does not count
+        toward "not progressing" — only in-sprint inactivity does.
+        """
         risks = []
         context = context or {}
         avg_sp = context.get("avg_sp", 0.0)
+        sprint_start = to_utc(sprint.get("startDate")) if sprint else None
 
         for issue in issues:
             key = issue.get("key")
             status = issue.get("status")
             if not key or status == "Done":
                 continue
-            h = hours_since(issue.get("updated"))
-            if h is None or h <= STALE_HOURS:
+            updated = to_utc(issue.get("updated"))
+            if not updated:
+                continue
+            ref = max(updated, sprint_start) if sprint_start else updated
+            h = (now_utc() - ref).total_seconds() / 3600
+            if h <= STALE_HOURS:
                 continue
 
-            raw, score, detail = self._stalled_ticket_score(issue, issues, avg_sp)
+            raw, score, detail = self._stalled_ticket_score(h, issue, issues, avg_sp)
             risks.append({
                 "type": "STORY_NOT_PROGRESSING",
                 "issue_key": key,
@@ -119,9 +130,12 @@ class RiskEngine:
 
         return risks
 
-    def _stalled_ticket_score(self, issue, issues, avg_sp):
-        """Per-ticket stalled formula (used by STORY_NOT_PROGRESSING)."""
-        h = hours_since(issue.get("updated")) or STALE_HOURS + 1
+    def _stalled_ticket_score(self, h, issue, issues, avg_sp):
+        """Per-ticket stalled formula (used by STORY_NOT_PROGRESSING).
+
+        `h` is the sprint-clamped hours-since-last-update computed by the
+        detector so pre-sprint silence never inflates the score.
+        """
         base = min(settings.stalled_base_cap, h / 2.0)
         stage = workflow_stage_weight(issue.get("status"))
         af = assignee_factor(issues, issue.get("assignee"))

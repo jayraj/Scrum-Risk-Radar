@@ -298,6 +298,34 @@ def run():
                          1 if (wired and restored and deep) else 0, 1, tol=0))
 
     # ------------------------------------------------------------------ #
+    # STORY_NOT_PROGRESSING (sprint-clamped staleness)
+    # ------------------------------------------------------------------ #
+    print("\nSTORY_NOT_PROGRESSING")
+    # MOS Sprint 5 scenario: sprint started 30h ago; ticket last touched
+    # 14 days ago (pre-sprint). Staleness must clamp to ~30h, not 336h.
+    sp = _sprint(days_elapsed=1.25, duration=5, name="MOS Sprint 5")
+    old_ticket = _issue("MOS-1", "In Progress", 5, 24 * 14)
+    stale_risks = eng.detect_story_progress_risks(sp, [old_ticket], {})
+    if not stale_risks:
+        raise AssertionError("STORY_NOT_PROGRESSING: pre-sprint-stale ticket did not fire")
+    s0 = stale_risks[0]
+    results.append(check("Story: pre-sprint silence clamps to sprint age (~30h)",
+                         1 if abs(s0["hours_since_update"] - 30) <= 2 else 0, 1, tol=0))
+    results.append(check("Story: clamped hours reflected in recommendation",
+                         1 if f"no updates in {int(round(s0['hours_since_update']))}h" in s0["recommendation"] else 0, 1, tol=0))
+
+    fresh = _issue("MOS-2", "In Progress", 3, 10)  # updated 10h ago, mid-sprint
+    results.append(check("Story: mid-sprint fresh ticket stays silent",
+                         len(eng.detect_story_progress_risks(sp, [fresh], {})), 0, tol=0))
+
+    # Same pre-sprint-stale ticket in a week-old sprint: more in-sprint
+    # silence => strictly higher score.
+    sp_week = _sprint(days_elapsed=7, duration=10, name="MOS Sprint 5")
+    week_risks = eng.detect_story_progress_risks(sp_week, [old_ticket], {})
+    results.append(check("Story: staleness/score grow with sprint age",
+                         1 if week_risks and week_risks[0]["risk_score"] > s0["risk_score"] else 0, 1, tol=0))
+
+    # ------------------------------------------------------------------ #
     # SCOPE_CREEP
     # ------------------------------------------------------------------ #
     print("\nSCOPE_CREEP")
