@@ -563,7 +563,9 @@ class RiskEngine:
         base = max(growth, min_growth) if (added or hiked) else growth
         tp = time_pressure_multiplier(sprint)
         raw = min(settings.scope_creep_cap, base) * tp
-        score = cap_score(raw)
+        # Unplanned work absorbed mid-sprint is always a red flag, even +1 SP:
+        # floor the displayed score so severity lands in CRITICAL.
+        score = max(cap_score(raw), settings.scope_creep_floor_score)
 
         parts = [f"Sprint scope grew {growth:.0f}% since planning ({baseline_sp:.0f} → {current_sp} SP)."]
         if added:

@@ -113,6 +113,9 @@ class Settings(BaseSettings):
     # Scope-creep detection (baseline captured on first active-sprint sync)
     scope_creep_min_growth_pct: float = 10.0
     scope_creep_cap: float = 85.0
+    # Product rule: ANY confirmed scope creep is a red flag, regardless of
+    # how small — floor the displayed score at CRITICAL territory.
+    scope_creep_floor_score: int = 80
     scope_history_size: int = 8
     scope_baseline_grace_hours: int = 24  # later capture => lower confidence
 

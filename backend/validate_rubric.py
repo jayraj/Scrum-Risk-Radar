@@ -316,7 +316,9 @@ def run():
     c = creep[0]
     expected_raw = min(settings_scope_cap(), ((5 - 3) / 3) * 100) * time_pressure_multiplier(sprint)
     results.append(check("Scope: type + growth percent", 1 if c["type"] == "SCOPE_CREEP" and abs(c["growth_percent"] - 66.7) < 0.5 else 0, 1, tol=0))
-    results.append(check("Scope: score = min(cap, growth%) x time pressure", c["risk_score"], int(round(expected_raw)), tol=2))
+    results.append(check("Scope: raw = min(cap, growth%) x time pressure", c["raw_score"], round(expected_raw, 1), tol=2))
+    results.append(check("Scope: any triggered creep floors at CRITICAL (>=80)", c["risk_score"], _settings.scope_creep_floor_score, tol=0))
+    results.append(check("Scope: floored severity is CRITICAL", 1 if c["severity"] == "CRITICAL" else 0, 1, tol=0))
     results.append(check("Scope: full-confidence baseline", c["confidence"], 75, tol=0))
 
     late_ctx = {"scope_baseline": dict(baseline, late_capture=True), "scope_history": [3, 5]}
@@ -340,6 +342,11 @@ def run():
     results.append(check("Scope: post-baseline added issue triggers risk",
                          1 if added_risk and added_risk[0]["type"] == "SCOPE_CREEP"
                          and added_risk[0]["added_issues"][0]["key"] == "PFIN-9" else 0, 1, tol=0))
+    if added_risk:
+        a = added_risk[0]
+        results.append(check("Scope: single +5SP addition still floors red",
+                             1 if a["severity"] == "CRITICAL" and a["risk_score"] >= _settings.scope_creep_floor_score else 0,
+                             1, tol=0))
 
     src_main = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "main.py")).read()
     captures = "baselines[name] = {" in src_main and "late_capture" in src_main
