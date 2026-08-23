@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from risk_components import to_utc
 from risk_engine import RiskEngine
 
-SPRINT_LEVEL_RISK_TYPES = ["BURNDOWN_BEHIND", "QA_BOTTLENECK", "BUG_RAISED"]
+SPRINT_LEVEL_RISK_TYPES = ["BURNDOWN_BEHIND", "QA_BOTTLENECK", "BUG_RAISED", "SCOPE_CREEP"]
 
 
 def _issue_to_sprint_lookup(sprint_data):

@@ -352,6 +352,11 @@ def run():
     results.append(check("Scope: manual seed endpoint + per-sync diagnostic log",
                          1 if (seeded and diag) else 0, 1, tol=0))
 
+    src_snap = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "snapshot.py")).read()
+    results.append(check("Scope: radar cards aggregate SCOPE_CREEP (SPRINT_LEVEL_RISK_TYPES)",
+                         1 if "SCOPE_CREEP" in src_snap.split("SPRINT_LEVEL_RISK_TYPES = ")[1].split("]")[0] else 0,
+                         1, tol=0))
+
     # ------------------------------------------------------------------ #
     print("\n" + "=" * 40)
     passed = sum(results)
