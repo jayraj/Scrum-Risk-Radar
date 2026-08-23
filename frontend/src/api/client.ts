@@ -107,6 +107,8 @@ export interface Mitigation {
   success_criteria?: string[]
   confidence?: number
   ai_used?: boolean
+  fallback_reason?: string
+  error?: string
   prompt?: string
   raw_response?: string
   llm?: { provider?: string; model?: string }
@@ -228,6 +230,7 @@ export interface FollowupMessage {
   issue_key: string
   message?: string
   generated_by?: string
+  fallback_reason?: string
 }
 
 export interface ProfileConfig {

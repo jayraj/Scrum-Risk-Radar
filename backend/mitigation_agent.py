@@ -92,6 +92,21 @@ class MitigationAgent:
             self.model = None
             self._provider_name = "rule-based"
 
+    @staticmethod
+    def _fallback_reason(exc: Exception) -> str:
+        """Classify an LLM failure so the UI can explain why a rule-based
+        plan/message was substituted (see describeAiFallback in the app)."""
+        text = str(exc).lower()
+        if "no llm provider" in text:
+            return "not_configured"
+        if "busy" in text or "in flight" in text:
+            return "busy"
+        if "timeout" in text or "timed out" in text or "deadline" in text:
+            return "timeout"
+        if any(k in text for k in ("api key", "unauthorized", "401", "403", "permission", "quota", "rate limit")):
+            return "auth"
+        return "provider_error"
+
     def _generate_with_model(self, prompt):
         if not self.model:
             raise RuntimeError("No LLM provider configured")
@@ -178,6 +193,7 @@ class MitigationAgent:
                 "prompt": prompt,
                 "raw_response": "",
                 "ai_used": False,
+                "fallback_reason": self._fallback_reason(e),
                 "llm": self.get_model_info(),
                 "action_items": [],
                 "owner": "Scrum Master (escalate if needed)",
@@ -345,6 +361,7 @@ Rules:
             return {
                 "message": self._linkify_issue_keys(self._rule_based_followup_message(blocker)),
                 "generated_by": "rule-based",
+                "fallback_reason": self._fallback_reason(e),
                 "error": str(e),
             }
 

@@ -10,6 +10,7 @@ import {
   type Mitigation,
 } from '../api/client'
 import {
+  describeAiFallback,
   formatRiskType,
   riskDetected,
   riskStatusFor,
@@ -41,6 +42,7 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
   const [draftingKey, setDraftingKey] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [draftGeneratedBy, setDraftGeneratedBy] = useState<Record<string, string>>({})
+  const [draftFallbackReasons, setDraftFallbackReasons] = useState<Record<string, string>>({})
   const [activeTab, setActiveTab] = useState('ALL')
   const [expandedKey, setExpandedKey] = useState<string | null>(null)
   // The AI mitigation plan stays hidden until the user explicitly asks for
@@ -84,6 +86,7 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
       const response = await apiGenerateFollowup(issueKey)
       setDrafts((prev) => ({ ...prev, [issueKey]: response.message || '' }))
       setDraftGeneratedBy((prev) => ({ ...prev, [issueKey]: response.generated_by || 'ai' }))
+      setDraftFallbackReasons((prev) => ({ ...prev, [issueKey]: response.fallback_reason || '' }))
     } catch (error) {
       console.error('Error drafting message:', error)
       setDrafts((prev) => ({ ...prev, [issueKey]: 'Failed to generate message. Please try again.' }))
@@ -284,7 +287,7 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
                               <div className="fallback-note">Paste this into the Jira ticket as a comment.</div>
                               {draftGeneratedBy[blocker.issue_key] === 'rule-based' && (
                                 <div className="fallback-note">
-                                  ⚠️ Generated from available data (AI temporarily unavailable)
+                                  {describeAiFallback(draftFallbackReasons[blocker.issue_key])}
                                 </div>
                               )}
                             </div>
@@ -307,7 +310,7 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
           <div className="mitigation-card">
             {sprintMitigation.ai_used === false && (
               <div className="ai-fallback-note">
-                ⚠️ Rule-based fallback — may be less relevant than AI-generated plans.
+                {describeAiFallback(sprintMitigation.fallback_reason)}
               </div>
             )}
             <h4 className="mitigation-title"><Bot size={20} className="title-icon" />AI MITIGATION PLAN</h4>

@@ -297,6 +297,10 @@ def run():
     deep = "deep_pseudonymize(risks[:5]" in src and "deep_pseudonymize(mitigations[:5]" in src
     results.append(check("Privacy: sanitization wired at all prompt sites + followup restore + report deep-scan",
                          1 if (wired and restored and deep) else 0, 1, tol=0))
+    # AI fallback payloads must carry a classified reason so the UI can
+    # explain the substitution instead of a generic warning.
+    results.append(check("Privacy/AI: fallback payloads classify reason for UI",
+                         1 if src.count('"fallback_reason"') >= 2 and "_fallback_reason" in src else 0, 1, tol=0))
 
     # Round-trip: no real names leave for the LLM; aliases restore exactly.
     from prompt_privacy import deep_scrub_text, deep_pseudonymize, restore_aliases

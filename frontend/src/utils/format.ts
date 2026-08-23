@@ -157,3 +157,18 @@ export const sprintDayLabel = (startDate?: string, endDate?: string): string | n
   const day = Math.max(1, Math.min(elapsed, total))
   return `Day ${day}/${total}`
 }
+
+export const describeAiFallback = (reason?: string): string => {
+  switch ((reason || '').toLowerCase()) {
+    case 'not_configured':
+      return '🔑 No AI provider is configured. Add your Gemini/OpenRouter API key in Settings to get AI-generated plans — showing a rule-based plan built from the detected risks meanwhile.'
+    case 'busy':
+      return '⏳ The AI was busy with another request, so this plan came from rule-based heuristics. Try again in a moment.'
+    case 'timeout':
+      return "⏱️ The AI didn't respond in time — showing a rule-based plan. Retrying usually works."
+    case 'auth':
+      return '🔑 The AI provider rejected the request — check your API key or quota in Settings. Showing a rule-based plan.'
+    default:
+      return '⚠️ AI unavailable right now — showing a rule-based plan built from the detected risks.'
+  }
+}
