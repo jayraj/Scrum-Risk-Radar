@@ -83,7 +83,7 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
     if (!issueKey) return
     setDraftingKey(issueKey)
     try {
-      const response = await apiGenerateFollowup(issueKey)
+      const response = await apiGenerateFollowup(issueKey, blocker)
       setDrafts((prev) => ({ ...prev, [issueKey]: response.message || '' }))
       setDraftGeneratedBy((prev) => ({ ...prev, [issueKey]: response.generated_by || 'ai' }))
       setDraftFallbackReasons((prev) => ({ ...prev, [issueKey]: response.fallback_reason || '' }))

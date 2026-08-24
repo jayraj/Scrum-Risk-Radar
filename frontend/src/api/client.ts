@@ -331,8 +331,16 @@ export const apiNextSprintRisks = async (projectKey: string): Promise<NextSprint
   return data
 }
 
-export const apiGenerateFollowup = async (issueKey: string): Promise<FollowupMessage> =>
-  (await api.post('/api/generate-followup-message', { issue_key: issueKey })).data
+export const apiGenerateFollowup = async (
+  issueKey: string,
+  blocker?: Blocker,
+): Promise<FollowupMessage> =>
+  (
+    await api.post('/api/generate-followup-message', {
+      issue_key: issueKey,
+      blocker: blocker ?? null,
+    })
+  ).data
 
 export const apiStakeholderReport = async (): Promise<{ report: string; generated_at: string }> =>
   (await api.get('/api/stakeholder-report')).data

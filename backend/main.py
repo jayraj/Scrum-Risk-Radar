@@ -301,12 +301,17 @@ def _refresh_snapshot(row: dict, config: UserConfig):
     return snapshot
 
 
-def _get_or_refresh_snapshot(row: dict):
+def _get_or_refresh_snapshot(row: dict, allow_stale: bool = False):
     config = UserConfig.from_row(row, decrypt)
     fetched_at = row.get("fetched_at")
     snapshot = row.get("snapshot")
 
     if snapshot:
+        # AI generation doesn't need freshly-fetched Jira data — the page the
+        # user is acting on already reflects the current snapshot. Reusing it
+        # avoids a full Jira refetch on every "Mitigate/Scan/draft" click.
+        if allow_stale:
+            return snapshot, config
         try:
             fetched_dt = datetime.fromisoformat(fetched_at.replace("Z", "+00:00")).replace(tzinfo=None)
         except Exception:
@@ -702,7 +707,9 @@ def generate_mitigations(request: Request, body: dict = None):
     if error:
         return error
 
-    snapshot, config = _get_or_refresh_snapshot(row)
+    t0 = time.time()
+    snapshot, config = _get_or_refresh_snapshot(row, allow_stale=True)
+    t_snap = time.time() - t0
     sprint_data = snapshot.get("sprint_data", {})
     lookup = {}
     for data in sprint_data.values():
@@ -738,7 +745,12 @@ def generate_mitigations(request: Request, body: dict = None):
             sprints[sprint_key]["risks"].append(risk)
 
     agent = MitigationAgent(config)
+    t_llm0 = time.time()
     mitigations = agent.generate_sprint_mitigation_plan(list(sprints.values()))
+    logger.info(
+        f"⏱️ generate_mitigations | snapshot={t_snap:.2f}s llm={time.time() - t_llm0:.2f}s "
+        f"total={time.time() - t0:.2f}s sprints={len(sprints)}"
+    )
     store.update_profile(row["slug"], {"snapshot": {**snapshot, "mitigations": mitigations}})
 
     return {
@@ -760,7 +772,9 @@ def next_sprint_risks(request: Request, body: dict = None):
     if not project_key:
         return JSONResponse({"status": "error", "error": "project_key is required"}, status_code=400)
 
-    snapshot, config = _get_or_refresh_snapshot(row)
+    t0 = time.time()
+    snapshot, config = _get_or_refresh_snapshot(row, allow_stale=True)
+    t_snap = time.time() - t0
     project_data = snapshot.get("next_sprint_data", {}).get(project_key)
     if not project_data or not project_data.get("sprint"):
         return JSONResponse(
@@ -773,11 +787,16 @@ def next_sprint_risks(request: Request, body: dict = None):
     rule_based_risks = risk_engine.calculate_next_sprint_risks(issues)
 
     agent = MitigationAgent(config)
+    t_llm0 = time.time()
     risks, ai_used, prompt, raw_response, ai_error = agent.analyze_next_sprint_risks(
         project_key=project_key,
         sprint=project_data.get("sprint", {}),
         issues=issues,
         rule_based_risks=rule_based_risks,
+    )
+    logger.info(
+        f"⏱️ next_sprint_risks | snapshot={t_snap:.2f}s llm={time.time() - t_llm0:.2f}s "
+        f"total={time.time() - t0:.2f}s project={project_key}"
     )
 
     return {
@@ -843,7 +862,22 @@ def generate_followup_message(request: Request, body: dict = None):
     if not issue_key:
         return JSONResponse({"status": "error", "error": "issue_key is required"}, status_code=400)
 
-    snapshot, config = _get_or_refresh_snapshot(row)
+    t0 = time.time()
+    config = UserConfig.from_row(row, decrypt)
+    blocker_in = (body or {}).get("blocker")
+
+    if blocker_in:
+        # Fast path: the UI already has the risk object, so skip the full Jira
+        # snapshot rebuild entirely (was the main cost of per-ticket drafts).
+        blocker = dict(blocker_in)
+        blocker.setdefault("issue_key", issue_key)
+        agent = MitigationAgent(config)
+        result = agent.generate_followup_message(blocker)
+        result["issue_key"] = issue_key
+        logger.info(f"⏱️ generate_followup_message | fast-path (no snapshot) llm={time.time() - t0:.2f}s issue={issue_key}")
+        return result
+
+    snapshot, _ = _get_or_refresh_snapshot(row)
     blocker = next(
         (r for r in snapshot.get("risks", []) if r.get("issue_key") == issue_key),
         {},
@@ -853,6 +887,7 @@ def generate_followup_message(request: Request, body: dict = None):
     agent = MitigationAgent(config)
     result = agent.generate_followup_message(blocker)
     result["issue_key"] = issue_key
+    logger.info(f"⏱️ generate_followup_message | snapshot-rebuild llm={time.time() - t0:.2f}s issue={issue_key}")
     return result
 
 

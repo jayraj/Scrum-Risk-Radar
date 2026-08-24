@@ -1,3 +1,4 @@
+import hashlib
 import html as html_lib
 import json
 import logging
@@ -21,6 +22,34 @@ from prompt_privacy import (
 # The google-generativeai SDK keeps API-key state process-global
 # (genai.configure); serialize init + calls to avoid cross-profile key races.
 _GENAI_LOCK = threading.Lock()
+
+# Cheap per-process LLM result cache (TTL). Serverless instances are ephemeral,
+# but a warm instance serves repeat clicks (e.g. re-running "Mitigate with AI")
+# from cache instead of re-hitting the (slow, quota-limited) provider.
+_LLM_CACHE: dict = {}
+_LLM_CACHE_TTL = 600  # seconds
+
+
+def _llm_cache_key(prefix: str, obj) -> str:
+    try:
+        payload = json.dumps(obj, sort_keys=True, default=str)
+    except Exception:
+        payload = str(obj)
+    digest = hashlib.md5(payload.encode("utf-8")).hexdigest()[:16]
+    return f"{prefix}:{digest}"
+
+
+def _llm_cache_get(key: str):
+    item = _LLM_CACHE.get(key)
+    if item and (time.time() - item[1]) < _LLM_CACHE_TTL:
+        return item[0]
+    _LLM_CACHE.pop(key, None)
+    return None
+
+
+def _llm_cache_put(key: str, value) -> None:
+    _LLM_CACHE[key] = (value, time.time())
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -151,7 +180,9 @@ class MitigationAgent:
                 try:
                     genai.configure(api_key=self._api_key)
                     return self.model.generate_content(
-                        prompt, request_options={"timeout": 45}
+                        prompt,
+                        generation_config={"max_output_tokens": 1024, "temperature": 0.3},
+                        request_options={"timeout": 45},
                     )
                 finally:
                     _GENAI_LOCK.release()
@@ -181,6 +212,11 @@ class MitigationAgent:
 
     def _generate_sprint_mitigation(self, sprint):
         sprint_key = sprint.get("sprint_key")
+        cache_key = _llm_cache_key("mit", {"s": sprint_key, "r": sprint.get("risks", []), "i": sprint.get("issues", [])})
+        cached = _llm_cache_get(cache_key)
+        if cached is not None:
+            logger.info(f"AI mitigation | cache hit | sprint={sprint_key}")
+            return cached
         project_key = sprint.get("project_key", "N/A")
         risks = sprint.get("risks", [])
         issues = sprint.get("issues", [])
@@ -226,6 +262,7 @@ class MitigationAgent:
             logger.info(
                 f"AI mitigation | source=LLM | provider={self.provider} | sprint={sprint_key}"
             )
+            _llm_cache_put(cache_key, mitigation)
             return mitigation
 
         except Exception as e:
@@ -281,16 +318,19 @@ class MitigationAgent:
         risks = sprint.get("risks", [])
         issues = sprint.get("issues", [])
 
+        # Cap the ticket payload and trim free text to keep the prompt (and the
+        # provider's generation time) small — large sprints were a major source
+        # of slow / 504 responses.
         sprint_issues = [{
             "key": i.get("key"),
-            "summary": i.get("summary"),
+            "summary": (i.get("summary") or "")[:300],
             "status": i.get("status"),
             "story_points": i.get("story_points", 0),
             "assignee": i.get("assignee", "Unassigned"),
             "due_date": i.get("due_date"),
-            "description": (i.get("description") or "")[:500],
-            "acceptance_criteria": (i.get("acceptance_criteria") or "")[:500],
-        } for i in issues]
+            "description": re.sub(r"\s+", " ", i.get("description") or "")[:250],
+            "acceptance_criteria": re.sub(r"\s+", " ", i.get("acceptance_criteria") or "")[:250],
+        } for i in issues[:30]]
         prompt_mapping = {}
         sprint_issues = [sanitize_issue_for_prompt(i, prompt_mapping) for i in sprint_issues]
         # Risks carry assignee keys AND free-text recommendations that can embed
@@ -390,6 +430,11 @@ Rules:
         return None
 
     def generate_followup_message(self, blocker):
+        cache_key = _llm_cache_key("followup", blocker)
+        cached = _llm_cache_get(cache_key)
+        if cached is not None:
+            logger.info(f"AI follow-up | cache hit | issue={blocker.get('issue_key')}")
+            return cached
         prompt = self._build_followup_prompt(blocker)
         real_assignee = (blocker.get("assignee") or "").strip()
         alias = "dev-01" if real_assignee else None
@@ -402,11 +447,13 @@ Rules:
                 text = restore_aliases(text, {real_assignee: alias})
             message = self._linkify_issue_keys(text)
             logger.info(f"AI follow-up | source=LLM | provider={self.provider}")
-            return {
+            result = {
                 "message": message,
                 "generated_by": "ai",
                 "raw": text,
             }
+            _llm_cache_put(cache_key, result)
+            return result
         except Exception as e:
             logger.error(f"AI follow-up | source=rule-based | provider={self.provider} | error={e}")
             return {
@@ -489,6 +536,11 @@ Write a short, friendly follow-up message (2-4 sentences) to {assignee} asking f
 
     def analyze_next_sprint_risks(self, project_key, sprint, issues, rule_based_risks=None):
         rule_based_risks = rule_based_risks or []
+        cache_key = _llm_cache_key("next", {"p": project_key, "i": issues})
+        cached = _llm_cache_get(cache_key)
+        if cached is not None:
+            logger.info(f"AI next-sprint | cache hit | project={project_key}")
+            return cached
         prompt, prompt_mapping = self._build_next_sprint_risk_prompt(project_key, sprint, issues)
 
         try:
@@ -501,7 +553,9 @@ Write a short, friendly follow-up message (2-4 sentences) to {assignee} asking f
                 logger.info(f"🤖 AI identified {len(raw_risks)} early risks for {project_key} next sprint "
                            f"[{info['provider']} | {info['model']}]")
             logger.info(f"AI next-sprint | source=LLM | provider={info['provider']} | project={project_key}")
-            return raw_risks, True, prompt, text, None
+            result = (raw_risks, True, prompt, text, None)
+            _llm_cache_put(cache_key, result)
+            return result
             logger.warning(f"⚠️ AI returned empty risk list for {project_key}. Using rule-based fallback. "
                            f"[{info['provider']} | {info['model']}]")
             return rule_based_risks, False, prompt, text, None
@@ -517,16 +571,16 @@ Write a short, friendly follow-up message (2-4 sentences) to {assignee} asking f
 
         issue_list = [{
             "key": i.get("key"),
-            "summary": i.get("summary"),
+            "summary": (i.get("summary") or "")[:300],
             "status": i.get("status"),
             "story_points": i.get("story_points", 0),
             "assignee": i.get("assignee", "Unassigned"),
             "issue_type": i.get("issue_type"),
             "priority": i.get("priority"),
-            "description": (i.get("description") or "")[:500],
-            "acceptance_criteria": (i.get("acceptance_criteria") or "")[:500],
+            "description": re.sub(r"\s+", " ", i.get("description") or "")[:250],
+            "acceptance_criteria": re.sub(r"\s+", " ", i.get("acceptance_criteria") or "")[:250],
             "due_date": i.get("due_date"),
-        } for i in issues]
+        } for i in issues[:30]]
         prompt_mapping = {}
         issue_list = [sanitize_issue_for_prompt(i, prompt_mapping) for i in issue_list]
         issue_list = [deep_scrub_text(i, prompt_mapping) for i in issue_list]

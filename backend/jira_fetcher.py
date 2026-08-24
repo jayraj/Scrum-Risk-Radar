@@ -11,6 +11,15 @@ from risk_components import is_qa_status
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Bound every Jira call so a single slow/hung connection can't stall a full
+# snapshot refresh (Vercel's function limit is the only other backstop).
+JIRA_TIMEOUT = 20
+
+
+def _get(url, **kwargs):
+    kwargs.setdefault("timeout", JIRA_TIMEOUT)
+    return requests.get(url, **kwargs)
+
 
 class JiraFetcher:
     def __init__(self, config: UserConfig):
@@ -29,7 +38,7 @@ class JiraFetcher:
         results: dict = {"auth": {"ok": False}}
 
         try:
-            r = requests.get(
+            r = _get(
                 f"{self.base_url}/rest/api/3/myself",
                 auth=self.auth, headers=self.headers, timeout=30,
             )
@@ -58,7 +67,7 @@ class JiraFetcher:
 
     def _project_diag(self, project_key) -> dict:
         try:
-            r = requests.get(
+            r = _get(
                 f"{self.base_url}/rest/agile/1.0/board",
                 auth=self.auth, headers=self.headers,
                 params={"projectKeyOrId": project_key}, timeout=30,
@@ -69,7 +78,7 @@ class JiraFetcher:
                 return {"ok": False, "error": "no board found"}
             board_id = boards[0]["id"]
             board_name = boards[0].get("name")
-            sr = requests.get(
+            sr = _get(
                 f"{self.base_url}/rest/agile/1.0/board/{board_id}/sprint",
                 auth=self.auth, headers=self.headers, timeout=30,
             )
@@ -87,7 +96,7 @@ class JiraFetcher:
 
     def detect_story_points_field(self) -> dict | None:
         """Find the custom field named 'Story Points' on this Jira instance."""
-        r = requests.get(
+        r = _get(
             f"{self.base_url}/rest/api/3/field",
             auth=self.auth, headers=self.headers, timeout=30,
         )
@@ -114,7 +123,7 @@ class JiraFetcher:
     # ------------------------------------------------------------------ #
     def _get_sprint_by_state(self, project_key, state):
         try:
-            boards = requests.get(
+            boards = _get(
                 f"{self.base_url}/rest/agile/1.0/board",
                 auth=self.auth, headers=self.headers,
                 params={"projectKeyOrId": project_key}, timeout=60,
@@ -125,7 +134,7 @@ class JiraFetcher:
                 return None
 
             board_id = boards[0]["id"]
-            sprints = requests.get(
+            sprints = _get(
                 f"{self.base_url}/rest/agile/1.0/board/{board_id}/sprint",
                 auth=self.auth, headers=self.headers, timeout=60,
             ).json().get("values", [])
@@ -137,7 +146,7 @@ class JiraFetcher:
     def get_sprint_issues(self, sprint_id):
         jql = f"sprint = {sprint_id} AND type in (Story, Task, Bug)"
         try:
-            response = requests.get(
+            response = _get(
                 f"{self.base_url}/rest/api/3/search/jql",
                 auth=self.auth, headers=self.headers,
                 params={"jql": jql, "maxResults": 100, "expand": "changelog", "fields": "*all"},
@@ -207,7 +216,7 @@ class JiraFetcher:
 
     def _get_recent_closed_sprints(self, project_key, max_sprints=5):
         try:
-            boards = requests.get(
+            boards = _get(
                 f"{self.base_url}/rest/agile/1.0/board",
                 auth=self.auth, headers=self.headers,
                 params={"projectKeyOrId": project_key}, timeout=60,
@@ -215,7 +224,7 @@ class JiraFetcher:
             if not boards:
                 return []
             board_id = boards[0]["id"]
-            sprints = requests.get(
+            sprints = _get(
                 f"{self.base_url}/rest/agile/1.0/board/{board_id}/sprint",
                 auth=self.auth, headers=self.headers,
                 params={"state": "closed", "maxResults": max_sprints}, timeout=60,
