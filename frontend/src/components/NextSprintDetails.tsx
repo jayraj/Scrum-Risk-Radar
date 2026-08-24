@@ -130,8 +130,10 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
               {project.sprint_key}
             </span>
           )}
-          <span>{project.issue_count} issue(s) planned</span>
-          <span>{project.total_sp} story points</span>
+        </div>
+        <div className="sprint-stats">
+          <div><span className="label">Planned work item(s):</span> {project.issue_count}</div>
+          <div><span className="label">Story Points:</span> {project.total_sp}</div>
         </div>
 
         {nextSprintRisks && !analyzing && nextSprintRisks.length === 0 && (

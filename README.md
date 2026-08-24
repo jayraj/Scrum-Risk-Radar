@@ -1,40 +1,40 @@
-# AgileComrade — Multi-Scrum-Master SaaS
+# AgileComrade — Your sprint companion
 
 React (TypeScript) frontend + FastAPI backend. Each scrum master configures their
 own Jira Cloud workspace and LLM provider in a Settings screen; the backend stores
 profiles encrypted in **Supabase** and serves the whole dashboard from a single
-**cached snapshot** so it can run on **Vercel serverless** (free plan). Scoring
-uses the **Sprint Risk Scoring Rubric v2** (`severity × time-pressure × blast-radius`).
+**cached snapshot**. Scoring uses a transparent **risk scoring model**
+(`severity × time-pressure × blast-radius`).
 
 > 📘 End-user documentation: [docs/USER_MANUAL.html](docs/USER_MANUAL.html)
 
 ## Architecture
 
 ```
-sprint-risk-radar-v2/
+agilecomrade/
 ├── sql/migration.sql         # profiles table + RLS (run in Supabase SQL editor)
-├── backend/                  # Vercel project #1 (Root Directory: backend)
+├── backend/                  # FastAPI app (token-gated)
 │   ├── vercel.json           # /api/* -> Python function
 │   ├── .vercelignore         # keeps venv/data out of the lambda
-│   ├── requirements.txt      # Python deps for the Vercel runtime
-│   ├── api/index.py          # Vercel serverless shim -> main.app
-│   ├── main.py               # FastAPI app (serverless, token-gated)
+│   ├── requirements.txt      # Python deps
+│   ├── api/index.py          # Serverless shim -> main.app
+│   ├── main.py               # FastAPI app
 │   ├── config.py             # Settings (env) + UserConfig (per-profile)
 │   ├── crypto.py             # AES-GCM (Fernet) at rest + SHA-256 token hash
 │   ├── supabase_store.py     # PostgREST CRUD for `profiles` (service-role only)
 │   ├── jira_fetcher.py       # Per-profile Jira fetch + story-points auto-detect + test_connection
-│   ├── risk_components.py    # Shared v2 scoring (time pressure, stage, size, …)
-│   ├── risk_engine.py        # v2 detectors + raw/capped scores + next-sprint
+│   ├── risk_components.py    # Shared scoring factors (time pressure, stage, size, …)
+│   ├── risk_engine.py        # Risk detectors + raw/capped scores + next-sprint
 │   ├── mitigation_agent.py   # Per-profile LLM (Gemini | OpenRouter) + fallback
 │   ├── snapshot.py           # Builds the single /api/snapshot payload
-│   └── validate_rubric.py    # Rubric example assertions (15/15 passing)
-└── frontend/                 # Vercel project #2 (Root Directory: frontend) — Vite React-TS app
+│   └── validate_rubric.py    # Example assertions for the risk model
+└── frontend/                 # Vite React-TS app
     └── src/
         ├── api/config.ts     # localStorage profile slug+token store
         ├── api/client.ts     # Axios client (X-SRR auth headers) + typed endpoints
         ├── hooks/useSnapshot.ts
         ├── utils/format.ts   # Severity colors (70/35), risk labels, dates
-        └── components/       # RiskRadar, NextSprintOverview, ExecutiveDashboard, SprintOverview, Settings, Header
+        └── components/       # RiskRadar, NextSprintOverview, ExecutiveDashboard, SprintOverview, Settings, TopStrip
 ```
 
 ## How multi-tenancy works
@@ -63,7 +63,7 @@ sprint-risk-radar-v2/
 
 ### 2. Environment variables
 
-Copy `.env.example` and fill in (local: `backend/.env`; deployed: Vercel env vars):
+Copy `.env.example` and fill in (local: `backend/.env`):
 
 ```
 ENCRYPTION_KEY=            # python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
@@ -96,64 +96,39 @@ Open `http://localhost:3001`, go to **Settings**, create a profile (Jira Cloud U
 email, API token, project keys, LLM provider/model/key). "Test Connection" validates
 it without saving. The generated access token is stored in your browser only.
 
-### 4. Deploy to Vercel (two separate projects)
+## Risk scoring model
 
-The monorepo deploys as **two independent Vercel projects**, each with its own
-Root Directory:
+Every risk starts from a base severity, then scales with schedule pressure and the
+number of teams/items it can affect:
 
-**Project 1 — Backend API**
+`score = base_severity × time_pressure_multiplier × blast_radius_weight`
 
-1. Import the repo into Vercel; set **Root Directory** to `backend`.
-2. Framework Preset: *Other*. Vercel auto-detects `backend/api/index.py` (Python
-   runtime) and installs `backend/requirements.txt`. `backend/vercel.json` maps
-   `/api/*` to the function; `.vercelignore` keeps `venv/` and `data/` out of the
-   lambda.
-3. Add env vars (project settings → Environment Variables): `ENCRYPTION_KEY`,
-   `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `CORS_ORIGINS` including the
-   frontend URL you will deploy next, e.g.
-   `https://<frontend>.vercel.app` (plus localhost for dev).
-4. Deploy → note the URL, e.g. `https://srr-backend.vercel.app`
-   (health check: `curl https://srr-backend.vercel.app/api/health`).
+The UI caps the result at 100 (`risk_score`); the uncapped value is also kept for
+ranking. Final buckets (frontend colors use the same thresholds):
 
-**Project 2 — Frontend**
+**LOW < 35 · MEDIUM 35–69 · HIGH ≥ 70**
 
-1. Import the same repo again; set **Root Directory** to `frontend`.
-2. Framework Preset: *Vite* (build `npm run build`, output `dist` — auto).
-3. Add one env var: `VITE_API_BASE=https://srr-backend.vercel.app` (the backend
-   project URL from above). Without it, production builds would call `/api`
-   same-origin and get 404s.
-4. Deploy.
+### Inputs
 
-Then open Settings → create a profile → **Test Connection** → Save → Dashboard.
-
-Note: Vercel Hobby functions have a per-request time limit (~10s default, up to 60s
-as set in `backend/vercel.json`). The first snapshot fetch per profile can take a few
-seconds; subsequent requests hit the cached snapshot. Because the apps are on
-different origins in production, cross-origin calls rely on `CORS_ORIGINS` —
-keep it in sync with both deployed URLs.
-
-## Scoring rubric v2
-
-`score = base_severity × time_pressure_multiplier × blast_radius_weight`, capped at
-100 for the UI (`risk_score`); uncapped `raw_score` is kept for ranking.
+**Time pressure** — driven by the share of sprint time already elapsed:
 
 | Time elapsed | Multiplier |
 |--------------|-----------|
 | 0–25%        | 0.6       |
-| 25–50%       | 0.8       |
-| 50–75%       | 1.1       |
-| 75–90%       | 1.4       |
+| 25–50%        | 0.8       |
+| 50–75%        | 1.1       |
+| 75–90%        | 1.4       |
 | 90–100%      | 1.7       |
 
-Severity buckets: **LOW < 35 · MEDIUM 35–69 · HIGH ≥ 70** (frontend colors use the
-same thresholds).
+**Workflow stage weight**: To Do 0.6 · In Progress 0.9 · Code Review 1.1 · QA/In QA
+Review 1.3 · Blocked 1.4.
 
-Workflow stage weights: To Do 0.6 · In Progress 0.9 · Code Review 1.1 · QA/In QA
-Review 1.3 · Blocked 1.4. Size weight `0.7 + (sp / avg_sprint_sp) × 0.3` clamped
-0.4–1.6.
+**Issue size**: `0.7 + (sp / avg_sprint_sp) × 0.3`, clamped to 0.4–1.6.
 
-Risk types (radar = sprint-level): BURNDOWN_BEHIND, QA_BOTTLENECK, DUE_DATE_PASSED.
-Ticket-level (blockers panel): STORY_NOT_PROGRESSING, EXTERNAL_DEPENDENCY.
+### Risk types
+
+- **Sprint-level** (radar cards): BURNDOWN_BEHIND, QA_BOTTLENECK, DUE_DATE_PASSED
+- **Ticket-level** (blockers panel): STORY_NOT_PROGRESSING, EXTERNAL_DEPENDENCY
 
 ## API endpoints
 
@@ -172,15 +147,3 @@ Ticket-level (blockers panel): STORY_NOT_PROGRESSING, EXTERNAL_DEPENDENCY.
 | `POST /api/next-sprint-issues` | profile | Planned work items |
 | `POST /api/generate-followup-message` | profile | Draft a follow-up to an assignee |
 | `GET /api/stakeholder-report` | profile | Executive summary |
-
-## v1 → v2 → SaaS changes
-
-- Flask → FastAPI, Vue → React (TypeScript), router + type-safe API client.
-- All risk scoring rebuilt on the v2 rubric (severity × time-pressure × blast-radius);
-  severity buckets moved from 80/60 to 70/35.
-- QA_BOTTLENECK emits `sprint_key` + `issue_keys` (was missing `sprint_key`).
-- Timezone-safe Jira timestamp parsing (`to_utc` handles `+0545` offsets);
-  `days_remaining` uses the rubric convention `duration − elapsed` (min 1).
-- **Multi-tenant**: per-profile config stored in Supabase (encrypted API keys),
-  token-based access, single `/api/snapshot` payload, serverless on Vercel.
-- Story-points field auto-detected (optional per-profile override).

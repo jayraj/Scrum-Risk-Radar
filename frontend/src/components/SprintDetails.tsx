@@ -161,17 +161,21 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
         </div>
 
         {card && (
-          <div className="sprint-detail-meta">
-            <span>
-              <span className="status-dot" style={{ backgroundColor: severityColor(card.severity) }} />{' '}
-              {card.sprint_key}
-            </span>
-            {sprintDayLabel(card.start_date, card.end_date) && (
-              <span>{sprintDayLabel(card.start_date, card.end_date)}</span>
-            )}
-            <span>Progress {card.total_sp > 0 ? Math.round((card.completed_sp / card.total_sp) * 100) : 0}%</span>
-            <span>{card.completed_sp} pt / {card.total_sp} pt</span>
-          </div>
+          <>
+            <div className="sprint-detail-meta">
+              <span>
+                <span className="status-dot" style={{ backgroundColor: severityColor(card.severity) }} />{' '}
+                {card.sprint_key}
+              </span>
+              {sprintDayLabel(card.start_date, card.end_date) && (
+                <span>{sprintDayLabel(card.start_date, card.end_date)}</span>
+              )}
+            </div>
+            <div className="sprint-stats">
+              <div><span className="label">Planned work item(s):</span> {card.issue_count ?? 0}</div>
+              <div><span className="label">Story Points:</span> {card.total_sp}</div>
+            </div>
+          </>
         )}
 
         {sprintBlockers.length === 0 ? (

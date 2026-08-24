@@ -552,6 +552,19 @@ body {
   color: var(--color-neutral-400);
 }
 
+.sprint-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 12px;
+  font-size: 13px;
+  color: var(--color-neutral-600);
+}
+
+.sprint-stats .label {
+  color: var(--color-neutral-500);
+}
+
 .panel-heading .ai-scan-btn {
   margin: 0;
   flex-shrink: 0;

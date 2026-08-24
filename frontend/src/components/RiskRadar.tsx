@@ -89,6 +89,11 @@ export default function RiskRadar({ syncIntervalSeconds, refreshKey = 0 }: RiskR
                   </span>
                 </div>
 
+                <div className="sprint-stats">
+                  <div><span className="label">Planned work item(s):</span> {risk.issue_count ?? 0}</div>
+                  <div><span className="label">Story Points:</span> {risk.total_sp}</div>
+                </div>
+
                 <div className="card-progress">
                   <span className="card-progress-label">
                     Progress {risk.total_sp > 0 ? Math.round((risk.completed_sp / risk.total_sp) * 100) : 0}%

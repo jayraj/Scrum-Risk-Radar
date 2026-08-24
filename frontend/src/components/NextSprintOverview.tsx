@@ -60,8 +60,10 @@ export default function NextSprintOverview({ syncIntervalSeconds, refreshKey = 0
               </div>
 
               <div className="risk-body">
-                <p className="risk-type">{project.issue_count} issue(s) planned</p>
-                <p className="sprint-meta">{project.total_sp} story points</p>
+                <div className="sprint-stats">
+                  <div><span className="label">Planned work item(s):</span> {project.issue_count}</div>
+                  <div><span className="label">Story Points:</span> {project.total_sp}</div>
+                </div>
               </div>
 
               <div className="risk-footer">
