@@ -773,7 +773,7 @@ def next_sprint_risks(request: Request, body: dict = None):
     rule_based_risks = risk_engine.calculate_next_sprint_risks(issues)
 
     agent = MitigationAgent(config)
-    risks, ai_used, prompt, raw_response = agent.analyze_next_sprint_risks(
+    risks, ai_used, prompt, raw_response, ai_error = agent.analyze_next_sprint_risks(
         project_key=project_key,
         sprint=project_data.get("sprint", {}),
         issues=issues,
@@ -787,6 +787,7 @@ def next_sprint_risks(request: Request, body: dict = None):
         "risks": risks,
         "total": len(risks),
         "ai_used": ai_used,
+        "error": ai_error,
         "prompt": prompt,
         "raw_response": raw_response,
         "llm": agent.get_model_info(),

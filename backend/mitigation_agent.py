@@ -3,6 +3,7 @@ import json
 import logging
 import re
 import threading
+import time
 import types
 
 import google.generativeai as genai
@@ -72,6 +73,7 @@ class MitigationAgent:
 
         api_key = config.llm_api_key
         model = config.llm_model
+        self._api_key = api_key
 
         try:
             if self.provider == "gemini":
@@ -107,22 +109,65 @@ class MitigationAgent:
             return "auth"
         return "provider_error"
 
+    @staticmethod
+    def _is_retryable(err: Exception) -> bool:
+        s = str(err).lower()
+        return any(
+            t in s
+            for t in (
+                "429",
+                "rate limit",
+                "resource exhausted",
+                "timeout",
+                "deadlineexceeded",
+                "503",
+                "502",
+                "500",
+                "unavailable",
+                "overloaded",
+            )
+        )
+
     def _generate_with_model(self, prompt):
         if not self.model:
             raise RuntimeError("No LLM provider configured")
-        if self.provider == "openrouter":
-            # Stateless per-instance HTTP client; no shared state to guard.
-            return self.model.generate_content(prompt)
-        # genai.configure mutates process-global SDK state, so Gemini calls
-        # must be serialized across concurrent profiles/threads. Bound the
-        # wait so requests degrade to rule-based fallback instead of
-        # queueing past Vercel's 60s function deadline.
-        if not _GENAI_LOCK.acquire(timeout=15):
-            raise RuntimeError("LLM busy — another analysis is in flight")
-        try:
-            return self.model.generate_content(prompt, request_options={"timeout": 45})
-        finally:
-            _GENAI_LOCK.release()
+
+        # Gemini free tier is prone to transient 429/timeout errors; retry a
+        # few times with exponential backoff before degrading to rule-based.
+        max_retries = 3
+        last_err: Exception | None = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                if self.provider == "openrouter":
+                    # Stateless per-instance HTTP client; no shared state to guard.
+                    return self.model.generate_content(prompt)
+                # genai.configure mutates process-global SDK state, so Gemini
+                # calls must be serialized AND re-configured per call. Re-setting
+                # the key here (not just at init) prevents concurrent requests
+                # from different users on the same serverless instance from
+                # cross-contaminating each other's API keys.
+                if not _GENAI_LOCK.acquire(timeout=30):
+                    raise RuntimeError("LLM busy — another analysis is in flight")
+                try:
+                    genai.configure(api_key=self._api_key)
+                    return self.model.generate_content(
+                        prompt, request_options={"timeout": 45}
+                    )
+                finally:
+                    _GENAI_LOCK.release()
+            except Exception as e:
+                last_err = e
+                if attempt == max_retries or not self._is_retryable(e):
+                    break
+                wait = 2 ** (attempt - 1)  # 1s, then 2s
+                logger.warning(
+                    f"AI call attempt {attempt} failed ({self.provider}): {e}. "
+                    f"Retrying in {wait}s..."
+                )
+                time.sleep(wait)
+
+        logger.error(f"LLM call failed after {max_retries} attempts: {last_err}")
+        raise last_err
 
     # ---------------- privacy: prompt sanitization ---------------- #
     # See prompt_privacy.py — assignees become per-call pseudonyms before
@@ -178,10 +223,15 @@ class MitigationAgent:
                 } for issue in issues],
             }
 
+            logger.info(
+                f"AI mitigation | source=LLM | provider={self.provider} | sprint={sprint_key}"
+            )
             return mitigation
 
         except Exception as e:
-            logger.error(f"Error generating sprint mitigation for {sprint_key}: {e}")
+            logger.error(
+                f"AI mitigation | source=rule-based | provider={self.provider} | sprint={sprint_key} | error={e}"
+            )
             return {
                 "sprint_key": sprint_key,
                 "project_key": project_key,
@@ -351,13 +401,14 @@ Rules:
                 # Restore the real name locally; the pseudonym never ships.
                 text = restore_aliases(text, {real_assignee: alias})
             message = self._linkify_issue_keys(text)
+            logger.info(f"AI follow-up | source=LLM | provider={self.provider}")
             return {
                 "message": message,
                 "generated_by": "ai",
                 "raw": text,
             }
         except Exception as e:
-            logger.error(f"Error generating follow-up message: {e}")
+            logger.error(f"AI follow-up | source=rule-based | provider={self.provider} | error={e}")
             return {
                 "message": self._linkify_issue_keys(self._rule_based_followup_message(blocker)),
                 "generated_by": "rule-based",
@@ -448,16 +499,16 @@ Write a short, friendly follow-up message (2-4 sentences) to {assignee} asking f
             info = self.get_model_info()
             if raw_risks:
                 logger.info(f"🤖 AI identified {len(raw_risks)} early risks for {project_key} next sprint "
-                            f"[{info['provider']} | {info['model']}]")
-                return raw_risks, True, prompt, text
+                           f"[{info['provider']} | {info['model']}]")
+            logger.info(f"AI next-sprint | source=LLM | provider={info['provider']} | project={project_key}")
+            return raw_risks, True, prompt, text, None
             logger.warning(f"⚠️ AI returned empty risk list for {project_key}. Using rule-based fallback. "
                            f"[{info['provider']} | {info['model']}]")
-            return rule_based_risks, False, prompt, text
+            return rule_based_risks, False, prompt, text, None
         except Exception as e:
             info = self.get_model_info()
-            logger.error(f"❌ AI next-sprint risk analysis failed for {project_key} "
-                         f"[{info['provider']} | {info['model']}]: {e}")
-            return rule_based_risks, False, prompt, ""
+            logger.error(f"AI next-sprint | source=rule-based | provider={info['provider']} | project={project_key} | error={e}")
+            return rule_based_risks, False, prompt, "", str(e)
 
     def _build_next_sprint_risk_prompt(self, project_key, sprint, issues):
         sprint_key = sprint.get("name") or sprint.get("id")
@@ -565,7 +616,8 @@ Make it suitable for a 5-minute stakeholder update. Be direct and actionable.
 
         try:
             response = self._generate_with_model(prompt)
+            logger.info(f"AI report | source=LLM | provider={self.provider}")
             return restore_aliases(response.text, report_mapping)
         except Exception as e:
-            logger.error(f"Error generating stakeholder report: {e}")
+            logger.error(f"AI report | source=rule-based | provider={self.provider} | error={e}")
             return f"Unable to generate report. {len(risks)} risks detected, manual review required."
