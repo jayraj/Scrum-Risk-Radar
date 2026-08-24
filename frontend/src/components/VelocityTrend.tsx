@@ -103,7 +103,7 @@ export default function VelocityTrend({ velocity, syncIntervalSeconds = 300, ref
       <h2 className="component-title"><TrendingUp size={24} className="title-icon" />VELOCITY TREND</h2>
       <p className="component-subtitle">Throughput of completed sprints per project — use the trend to commit realistically in your next planning.</p>
       {Object.keys(data).length === 0 ? (
-        <div className="empty-cell">No completed sprint data available yet.</div>
+        <div className="no-data no-data-soft">✅ No completed sprint data available yet.</div>
       ) : (
         <>
           <div className="velocity-project-avg">
