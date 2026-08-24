@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Bot, ShieldAlert, ShieldCheck } from 'lucide-react'
+import { Calendar, Layers, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { useSnapshot } from '../hooks/useSnapshot'
 import {
   apiGenerateFollowup,
@@ -11,14 +11,14 @@ import {
 } from '../api/client'
 import {
   describeAiFallback,
+  formatDate,
   formatRiskType,
-  riskDetected,
-  riskStatusFor,
-  riskTitle,
-  severityColor,
   splitItems,
   sprintDayLabel,
 } from '../utils/format'
+import SprintGauge from './SprintGauge'
+import RiskCardItem from './RiskCardItem'
+import WorkItemTable from './WorkItemTable'
 
 interface SprintDetailsProps {
   syncIntervalSeconds: number
@@ -43,10 +43,6 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [draftGeneratedBy, setDraftGeneratedBy] = useState<Record<string, string>>({})
   const [draftFallbackReasons, setDraftFallbackReasons] = useState<Record<string, string>>({})
-  const [activeTab, setActiveTab] = useState('ALL')
-  const [expandedKey, setExpandedKey] = useState<string | null>(null)
-  // The AI mitigation plan stays hidden until the user explicitly asks for
-  // it — tracked per sprint so switching sprints hides it again.
   const [planRequestedFor, setPlanRequestedFor] = useState<string | null>(null)
 
   const resolvedName = sprintName ?? (sprintKey ? decodeURIComponent(sprintKey) : '')
@@ -54,16 +50,10 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
   const sprintBlockers = resolvedName ? blockers.filter((b) => b.sprint_key === resolvedName) : []
   const sprintMitigation = mitigations.find((m) => m.sprint_key === resolvedName) || null
   const planVisible = !!resolvedName && planRequestedFor === resolvedName
-
-  // Live issue summaries from the synced sprint data, so every row in the
-  // risk table can show its ticket summary even if the blocker payload
-  // omits one.
-  const summaryByKey = new Map<string, string>()
-  for (const data of Object.values(snapshot?.sprint_data ?? {})) {
-    for (const issue of data.issues ?? []) {
-      if (issue.key && issue.summary) summaryByKey.set(issue.key, issue.summary)
-    }
-  }
+  const sprintDataEntry = resolvedName
+    ? Object.values(snapshot?.sprint_data ?? {}).find((d) => d.sprint?.name === resolvedName)
+    : undefined
+  const sprintIssues = sprintDataEntry?.issues ?? []
 
   const generateMitigations = async () => {
     if (!resolvedName) return
@@ -140,13 +130,41 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
       <div className="blockers-panel">
         <div className="panel-heading">
           <div className="panel-heading-left">
-            <h2 className="component-title"><ShieldAlert size={24} className="title-icon" />{resolvedName} Blockers &amp; Impediments</h2>
-            {card && (
-              <span className="risk-score" style={{ backgroundColor: severityColor(card.severity) }}>
-                {card.risk_score}%
-              </span>
+            {card ? (
+              <div className="sprint-card-head sprint-card-head--bare">
+                <span className="sprint-card-eyebrow">ACTIVE SPRINT</span>
+                <div className="sprint-card-head-row">
+                  <span className="sprint-card-name">{resolvedName}</span>
+                  {sprintDayLabel(card.start_date, card.end_date) && (
+                    <span className="sprint-card-day">{sprintDayLabel(card.start_date, card.end_date)}</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <h2 className="component-title"><ShieldAlert size={24} className="title-icon" />{resolvedName}</h2>
             )}
           </div>
+          <div className="panel-heading-actions">
+            {card && <SprintGauge score={card.risk_score} />}
+          </div>
+        </div>
+
+        {card && (
+          <>
+            <div className="sprint-detail-meta">
+              <span>
+                <Calendar size={13} className="sprint-meta-icon" />
+                {card.start_date && card.end_date
+                  ? `${formatDate(card.start_date)} → ${formatDate(card.end_date)}`
+                  : card.start_date
+                    ? formatDate(card.start_date)
+                    : ''}
+              </span>
+            </div>
+          </>
+        )}
+
+        <div className="panel-action-bar">
           <button
             className="ai-scan-btn"
             onClick={() => {
@@ -160,154 +178,55 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
           </button>
         </div>
 
-        {card && (
-          <>
-            <div className="sprint-detail-meta">
-              <span>
-                <span className="status-dot" style={{ backgroundColor: severityColor(card.severity) }} />{' '}
-                {card.sprint_key}
-              </span>
-              {sprintDayLabel(card.start_date, card.end_date) && (
-                <span>{sprintDayLabel(card.start_date, card.end_date)}</span>
-              )}
-            </div>
-            <div className="sprint-stats">
-              <div><span className="label">Planned work item(s):</span> {card.issue_count ?? 0}</div>
-              <div><span className="label">Story Points:</span> {card.total_sp}</div>
-            </div>
-          </>
-        )}
-
         {sprintBlockers.length === 0 ? (
           <div className="empty-cell">
             No risks found. The Sprint health looks good !!!
             {planVisible && sprintMitigation && ' Review the AI Summary below for the next Actions.'}
           </div>
         ) : (
-          <>
-            <div className="risk-tabs">
-              {[
-                { key: 'ALL', label: 'All' },
-                { key: 'CRITICAL', label: 'Critical' },
-                { key: 'HIGH', label: 'High' },
-                { key: 'MEDIUM', label: 'Medium' },
-                { key: 'LOW', label: 'Low' },
-              ].map((tab) => {
-                const count =
-                  tab.key === 'ALL'
-                    ? sprintBlockers.length
-                    : sprintBlockers.filter((b) => (b.severity || '').toUpperCase() === tab.key).length
+          <section className="detail-section">
+            <div className="section-head">
+              <ShieldAlert size={13} className="section-head-icon" style={{ color: '#ef4444' }} />
+              <h2 className="section-head-title">Risks Identified</h2>
+              <span className="section-count" style={{ background: 'var(--badge-critical-bg)', color: 'var(--badge-critical-text)' }}>
+                {sprintBlockers.length}
+              </span>
+            </div>
+            <div className="risk-card-list">
+              {sprintBlockers.map((blocker) => {
+                const key = blocker.issue_key || `${blocker.type}-${blocker.sprint_key}-${blocker.summary || ''}`
                 return (
-                  <button
-                    key={tab.key}
-                    className={`risk-tab ${activeTab === tab.key ? 'active' : ''}`}
-                    onClick={() => setActiveTab(tab.key)}
-                  >
-                    {tab.label} ({count})
-                  </button>
+                  <RiskCardItem
+                    key={key}
+                    blocker={blocker}
+                    showDraft={!!blocker.issue_key}
+                    drafting={draftingKey === blocker.issue_key}
+                    onDraft={() => draftMessage(blocker)}
+                    draft={blocker.issue_key ? drafts[blocker.issue_key] : undefined}
+                    generatedBy={blocker.issue_key ? draftGeneratedBy[blocker.issue_key] : undefined}
+                    fallbackReason={blocker.issue_key ? draftFallbackReasons[blocker.issue_key] : undefined}
+                    onCopy={() => blocker.issue_key && copyDraft(blocker.issue_key)}
+                  />
                 )
               })}
             </div>
+          </section>
+        )}
 
-            <div className="risk-table">
-              <div className="risk-table-header">
-                <span>Risk</span>
-                <span>Category</span>
-                <span>Detected</span>
-                <span>Stories</span>
-                <span>Status</span>
-              </div>
-              <div className="risk-table-rows">
-                {(activeTab === 'ALL'
-                  ? sprintBlockers
-                  : sprintBlockers.filter((b) => (b.severity || '').toUpperCase() === activeTab)
-                ).map((blocker) => {
-                  const key = blocker.issue_key || `${blocker.type}-${blocker.sprint_key}-${blocker.summary || ''}`
-                  const severity = (blocker.severity || '').toUpperCase()
-                  const storyCount = blocker.issue_keys?.length ?? blocker.count ?? (blocker.issue_key ? 1 : 0)
-                  const detect = riskDetected(blocker)
-                  const status = riskStatusFor(blocker.severity)
-                  const expanded = expandedKey === key
-                  const showDraft = !!blocker.issue_key
-                  return (
-                    <div key={key} className="risk-row-wrap">
-                      <button
-                        className={`risk-row ${expanded ? 'selected' : ''}`}
-                        onClick={() => setExpandedKey(expanded ? null : key)}
-                      >
-                        <div className="risk-row-main">
-                          <span
-                            className={`risk-dot ${severity === 'CRITICAL' || severity === 'MEDIUM' ? 'pulse' : ''}`}
-                            style={{ backgroundColor: severityColor(blocker.severity) }}
-                          />
-                          <span className="risk-row-title">
-                            <span className="blocker-key">{riskTitle(blocker)}</span>
-                            {(() => {
-                              const summary = summaryByKey.get(blocker.issue_key ?? '') || blocker.summary || ''
-                              return summary && summary !== riskTitle(blocker) ? (
-                                <span className="risk-row-summary">{summary}</span>
-                              ) : null
-                            })()}
-                          </span>
-                        </div>
-                        <span className="risk-row-cat">{formatRiskType(blocker.type)}</span>
-                        <span className="risk-row-detect">{detect}</span>
-                        <span className="risk-row-stories" style={{ color: severityColor(blocker.severity) }}>
-                          {storyCount}pt
-                        </span>
-                        <span className="risk-row-status" style={{ color: status.color }}>
-                          {status.label}
-                        </span>
-                      </button>
-                      {expanded && (
-                        <div className="risk-row-expand">
-                          <div className="risk-mitigation">
-                            <span className="risk-mitigation-label">⚡ AI MITIGATION STRATEGY</span>
-                            <p>{blocker.recommendation || 'No recommendation available.'}</p>
-                          </div>
-                          {showDraft && (
-                            <div className="risk-row-actions">
-                              <button
-                                className="draft-btn"
-                                disabled={draftingKey === blocker.issue_key}
-                                onClick={() => draftMessage(blocker)}
-                              >
-                                {draftingKey === blocker.issue_key ? 'Drafting...' : '💬 Draft Message'}
-                              </button>
-                            </div>
-                          )}
-                          {blocker.issue_key && drafts[blocker.issue_key] && (
-                            <div className="draft-output">
-                              <div className="draft-output-header">
-                                <span>✍️ AI Follow-up Message</span>
-                                <div className="draft-output-actions">
-                                  <button className="copy-btn" onClick={() => copyDraft(blocker.issue_key!)}>📋 Copy</button>
-                                </div>
-                              </div>
-                              <p
-                                className="draft-text"
-                                dangerouslySetInnerHTML={{ __html: drafts[blocker.issue_key] }}
-                              />
-                              <div className="fallback-note">Paste this into the Jira ticket as a comment.</div>
-                              {draftGeneratedBy[blocker.issue_key] === 'rule-based' && (
-                                <div className="fallback-note">
-                                  {describeAiFallback(draftFallbackReasons[blocker.issue_key])}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-                {activeTab !== 'ALL' &&
-                  sprintBlockers.filter((b) => (b.severity || '').toUpperCase() === activeTab).length === 0 && (
-                    <div className="risk-table-empty">No {activeTab.toLowerCase()} risks in this sprint.</div>
-                  )}
-              </div>
+        {sprintIssues.length > 0 && (
+          <section className="detail-section">
+            <div className="section-head">
+              <Layers size={13} className="section-head-icon" style={{ color: 'var(--color-indigo-500)' }} />
+              <h2 className="section-head-title">Planned Work Items</h2>
+              <span className="section-count" style={{ background: 'var(--color-indigo-50)', color: 'var(--color-indigo-600)' }}>
+                {sprintIssues.length}
+              </span>
+              <span className="details-pts-total">{card?.total_sp ?? 0} pts total</span>
             </div>
-          </>
+            <div className="work-item-list">
+              <WorkItemTable items={sprintIssues} />
+            </div>
+          </section>
         )}
 
         {planVisible && sprintMitigation && (
@@ -317,7 +236,7 @@ export default function SprintDetails({ syncIntervalSeconds, refreshKey = 0, spr
                 {describeAiFallback(sprintMitigation.fallback_reason)}
               </div>
             )}
-            <h4 className="mitigation-title"><Bot size={20} className="title-icon" />AI MITIGATION PLAN</h4>
+            <h4 className="mitigation-title"><ShieldCheck size={20} className="title-icon" />AI MITIGATION PLAN</h4>
 
             {(sprintMitigation.risk_types ?? []).length > 0 && (
               <div className="risk-chips">

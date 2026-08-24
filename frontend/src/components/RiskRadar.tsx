@@ -1,11 +1,8 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Target } from 'lucide-react'
 import { useSnapshot } from '../hooks/useSnapshot'
-import {
-  severityClass,
-  severityColor,
-  sprintDayLabel,
-} from '../utils/format'
+import SprintCard from './SprintCard'
+import type { Blocker } from '../api/client'
 
 interface RiskRadarProps {
   syncIntervalSeconds: number
@@ -14,7 +11,6 @@ interface RiskRadarProps {
 
 export default function RiskRadar({ syncIntervalSeconds, refreshKey = 0 }: RiskRadarProps) {
   const { snapshot, loading, error, noProfile } = useSnapshot(syncIntervalSeconds, refreshKey)
-  const navigate = useNavigate()
 
   const radarData = snapshot?.radar_data ?? []
   const blockers = snapshot?.blockers ?? []
@@ -56,81 +52,17 @@ export default function RiskRadar({ syncIntervalSeconds, refreshKey = 0 }: RiskR
           )}
           {radarData.length > 0 && hasRisks && (
             <div className="risk-warning-banner">
-              ⚠️ Attention, your one of the sprint is on RISK. Do an assesment proatively !!!!
+              ⚠️ Attention, your one of the sprint is on RISK. Do an assesment proactively !!!!
             </div>
           )}
 
-          <div className="radar-grid">
+          <div className="sprint-card-grid">
             {radarData.map((risk) => {
-              const cardBlockers = blockers.filter((b) => b.sprint_key === risk.sprint_key)
-              const critical = cardBlockers.filter((b) => b.severity === 'CRITICAL').length
-              const high = cardBlockers.filter((b) => b.severity === 'HIGH').length
-              const medium = cardBlockers.filter((b) => b.severity === 'MEDIUM').length
-              const low = cardBlockers.filter((b) => b.severity === 'LOW').length
-              const totalCardRisks = critical + high + medium + low
-
+              const cardBlockers: Blocker[] = blockers.filter((b) => b.sprint_key === risk.sprint_key)
               return (
-              <div key={risk.sprint_key} className={`risk-card ${severityClass(risk.severity)}`}>
-                <div className="risk-header">
-                  <span className="issue-key">
-                    <span
-                      className="status-dot"
-                      style={{ backgroundColor: severityColor(risk.severity) }}
-                    ></span>
-                    {risk.sprint_key}
-                    {sprintDayLabel(risk.start_date, risk.end_date) && (
-                      <span className="sprint-day">
-                        · {sprintDayLabel(risk.start_date, risk.end_date)}
-                      </span>
-                    )}
-                  </span>
-                  <span className="risk-score" style={{ backgroundColor: severityColor(risk.severity) }}>
-                    {risk.risk_score}%
-                  </span>
-                </div>
-
-                <div className="sprint-stats">
-                  <div><span className="label">Planned work item(s):</span> {risk.issue_count ?? 0}</div>
-                  <div><span className="label">Story Points:</span> {risk.total_sp}</div>
-                </div>
-
-                <div className="card-progress">
-                  <span className="card-progress-label">
-                    Progress {risk.total_sp > 0 ? Math.round((risk.completed_sp / risk.total_sp) * 100) : 0}%
-                  </span>
-                  <span className="card-progress-pts">
-                    {risk.completed_sp} pt / {risk.total_sp} pt
-                  </span>
-                </div>
-
-                <div className="risk-chips">
-                  {totalCardRisks === 0 ? (
-                    <span className="risk-chip low">No issues</span>
-                  ) : (
-                    <>
-                      {critical > 0 && (
-                        <span className="risk-chip critical">{critical} critical</span>
-                      )}
-                      {high > 0 && (
-                        <span className="risk-chip high">{high} high</span>
-                      )}
-                      {medium > 0 && (
-                        <span className="risk-chip medium">{medium} medium</span>
-                      )}
-                      {low > 0 && (
-                        <span className="risk-chip low">{low} low</span>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                <div className="risk-footer">
-                  <button className="details-btn" onClick={() => navigate(`/sprint/${encodeURIComponent(risk.sprint_key)}`)}>
-                    Details →
-                  </button>
-                </div>
-              </div>
-            )})}
+                <SprintCard key={risk.sprint_key} data={risk} blockers={cardBlockers} />
+              )
+            })}
           </div>
         </>
       )}

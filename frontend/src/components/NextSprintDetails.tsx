@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ClipboardList, RefreshCw } from 'lucide-react'
+import { Calendar, Layers, RefreshCw, ShieldAlert } from 'lucide-react'
 import { useSnapshot } from '../hooks/useSnapshot'
 import {
   apiNextSprintIssues,
@@ -12,11 +12,11 @@ import {
 } from '../api/client'
 import {
   formatDate,
-  formatRiskType,
-  getRiskColor,
-  riskStatusFor,
-  severityColor,
+  sprintDayLabel,
 } from '../utils/format'
+import SprintGauge from './SprintGauge'
+import RiskCardItem from './RiskCardItem'
+import WorkItemTable from './WorkItemTable'
 
 interface NextSprintDetailsProps {
   project: NextSprintProject
@@ -35,8 +35,6 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
   const [aiRawResponse, setAiRawResponse] = useState<string | null>(null)
   const [aiUsed, setAiUsed] = useState(false)
   const [llmInfo, setLlmInfo] = useState<{ provider?: string; model?: string } | null>(null)
-  const [activeTab, setActiveTab] = useState('ALL')
-  const [expandedKey, setExpandedKey] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -70,9 +68,6 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
       setAnalyzing(false)
     }
   }
-
-  const summaryByKey = new Map(issues.map((issue) => [issue.key, issue.summary]))
-  const assigneeByKey = new Map(issues.map((issue) => [issue.key, issue.assignee]))
 
   if (noProfile) {
     return (
@@ -108,134 +103,74 @@ export default function NextSprintDetails({ project, onBack, syncIntervalSeconds
       <div className="blockers-panel">
         <div className="panel-heading">
           <div className="panel-heading-left">
-            <h2 className="component-title"><ClipboardList size={24} className="title-icon" />{project.project_key} Sprint Readiness</h2>
-            <span className="risk-score" style={{ backgroundColor: getRiskColor(project.risk_score) }}>
-              {project.risk_score !== undefined && project.risk_score !== null ? project.risk_score : 'N/A'}%
-            </span>
+            <div className="sprint-card-head sprint-card-head--bare">
+              <span className="sprint-card-eyebrow">UPCOMING SPRINT</span>
+              <div className="sprint-card-head-row">
+                <span className="sprint-card-name">{project.sprint_key}</span>
+                {sprintDayLabel(project.start_date, project.end_date) && (
+                  <span className="sprint-card-day">{sprintDayLabel(project.start_date, project.end_date)}</span>
+                )}
+              </div>
+            </div>
           </div>
+          <div className="panel-heading-actions">
+            <SprintGauge score={project.risk_score} />
+          </div>
+        </div>
+
+        <div className="sprint-detail-meta">
+              <span>
+                <Calendar size={13} className="sprint-meta-icon" />
+            {project.start_date && project.end_date
+              ? `${formatDate(project.start_date)} → ${formatDate(project.end_date)}`
+              : project.start_date
+                ? formatDate(project.start_date)
+                : ''}
+          </span>
+        </div>
+
+        <div className="panel-action-bar">
           <button className="ai-scan-btn" onClick={analyzeRisks} disabled={analyzing}>
             <RefreshCw size={16} />
             {analyzing ? 'Analyzing...' : 'SCAN WITH AI'}
           </button>
         </div>
-        <div className="sprint-detail-meta">
-          {project.start_date && project.end_date ? (
-            <span>
-              <span className="status-dot" style={{ backgroundColor: getRiskColor(project.risk_score) }} />{' '}
-              {project.sprint_key} · {formatDate(project.start_date)} → {formatDate(project.end_date)}
-            </span>
-          ) : (
-            <span>
-              <span className="status-dot" style={{ backgroundColor: getRiskColor(project.risk_score) }} />{' '}
-              {project.sprint_key}
-            </span>
-          )}
-        </div>
-        <div className="sprint-stats">
-          <div><span className="label">Planned work item(s):</span> {project.issue_count}</div>
-          <div><span className="label">Story Points:</span> {project.total_sp}</div>
-        </div>
 
-        {nextSprintRisks && !analyzing && nextSprintRisks.length === 0 && (
-          <div className="risk-summary ok">✅ No early risks found before planning.</div>
+        {nextSprintRisks !== null && (
+          nextSprintRisks.length === 0 ? (
+            <div className="empty-cell">✅ No early risks detected. Sprint is ready for planning.</div>
+          ) : (
+            <section className="detail-section">
+              <div className="section-head">
+                <ShieldAlert size={13} className="section-head-icon" style={{ color: '#ef4444' }} />
+                <h2 className="section-head-title">Risks Identified</h2>
+                <span className="section-count" style={{ background: 'var(--badge-critical-bg)', color: 'var(--badge-critical-text)' }}>
+                  {nextSprintRisks.length}
+                </span>
+              </div>
+              <div className="risk-card-list">
+                {nextSprintRisks.map((risk, i) => (
+                  <RiskCardItem key={risk.issue_key || `${risk.type}-${risk.sprint_key}-${i}`} blocker={risk} />
+                ))}
+              </div>
+            </section>
+          )
         )}
 
-        {nextSprintRisks && nextSprintRisks.length > 0 && (() => {
-            const ticketRows = nextSprintRisks.flatMap((risk) => {
-              const keys = risk.issue_keys?.length ? risk.issue_keys : risk.issue_key ? [risk.issue_key] : []
-              if (!keys.length) return [{ risk, ticketKey: risk.sprint_key || risk.type }]
-              return keys.map((ticketKey) => ({ risk, ticketKey }))
-            })
-            const filteredRows =
-              activeTab === 'ALL'
-                ? ticketRows
-                : ticketRows.filter((tr) => (tr.risk.severity || '').toUpperCase() === activeTab)
-            return (
-          <div>
-            <div className="risk-summary">⚠️ {nextSprintRisks.length} early risk(s) found before planning</div>
-
-            <div className="risk-tabs">
-              {[
-                { key: 'ALL', label: 'All' },
-                { key: 'CRITICAL', label: 'Critical' },
-                { key: 'HIGH', label: 'High' },
-                { key: 'MEDIUM', label: 'Medium' },
-                { key: 'LOW', label: 'Low' },
-              ].map((tab) => {
-                const count =
-                  tab.key === 'ALL'
-                    ? nextSprintRisks.length
-                    : nextSprintRisks.filter((r) => (r.severity || '').toUpperCase() === tab.key).length
-                return (
-                  <button
-                    key={tab.key}
-                    className={`risk-tab ${activeTab === tab.key ? 'active' : ''}`}
-                    onClick={() => setActiveTab(tab.key)}
-                  >
-                    {tab.label} ({count})
-                  </button>
-                )
-              })}
+        {issues.length > 0 && (
+          <section className="detail-section">
+            <div className="section-head">
+              <Layers size={13} className="section-head-icon" style={{ color: 'var(--color-indigo-500)' }} />
+              <h2 className="section-head-title">Planned Work Items</h2>
+              <span className="section-count" style={{ background: 'var(--color-indigo-50)', color: 'var(--color-indigo-600)' }}>
+                {issues.length}
+              </span>
+              <span className="details-pts-total">{project.total_sp} pts total</span>
             </div>
-
-            <div className="risk-table four-col">
-              <div className="risk-table-header">
-                <span>Risk</span>
-                <span>Category</span>
-                <span>Assignee</span>
-                <span>Status</span>
-              </div>
-              <div className="risk-table-rows">
-                {filteredRows.map(({ risk, ticketKey }) => {
-                  const key = `${risk.type}-${ticketKey}`
-                  const severity = (risk.severity || '').toUpperCase()
-                  const assignee = assigneeByKey.get(ticketKey) || risk.assignee || '—'
-                  const status = riskStatusFor(risk.severity)
-                  const expanded = expandedKey === key
-                  return (
-                    <div key={key} className="risk-row-wrap">
-                      <button
-                        className={`risk-row ${expanded ? 'selected' : ''}`}
-                        onClick={() => setExpandedKey(expanded ? null : key)}
-                      >
-                        <div className="risk-row-main">
-                          <span
-                            className={`risk-dot ${severity === 'CRITICAL' || severity === 'MEDIUM' ? 'pulse' : ''}`}
-                            style={{ backgroundColor: severityColor(risk.severity) }}
-                          />
-                          <span className="risk-row-title">
-                            <span className="blocker-key">{ticketKey}</span>
-                            <span className="risk-row-summary">{summaryByKey.get(ticketKey) || ''}</span>
-                          </span>
-                        </div>
-                        <span className="risk-row-cat">{formatRiskType(risk.type)}</span>
-                        <span className="risk-row-detect">{assignee}</span>
-                        <span className="risk-row-status" style={{ color: status.color }}>
-                          {status.label}
-                        </span>
-                      </button>
-                      {expanded && (
-                        <div className="risk-row-expand">
-                          <div className="risk-mitigation">
-                            <span className="risk-mitigation-label">⚡ AI MITIGATION STRATEGY</span>
-                            <p>{risk.recommendation || 'No recommendation available.'}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-                {filteredRows.length === 0 && (
-                  <div className="risk-table-empty">No {activeTab.toLowerCase()} risks found before planning.</div>
-                )}
-              </div>
+            <div className="work-item-list">
+              <WorkItemTable items={issues} />
             </div>
-          </div>
-          )
-          })()}
-
-        {!analyzing && nextSprintRisks !== null && nextSprintRisks.length === 0 && (
-          <div className="empty-cell">✅ No early risks detected. Sprint is ready for planning.</div>
+          </section>
         )}
 
         {SHOW_AI_DEBUG && aiPrompt !== null && (

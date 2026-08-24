@@ -222,7 +222,10 @@ export interface Snapshot {
   }
   sprint_data?: Record<
     string,
-    { sprint?: { name?: string }; issues?: Array<{ key?: string; summary?: string; assignee?: string }> }
+    {
+      sprint?: { name?: string }
+      issues?: Array<{ key?: string; summary?: string; assignee?: string; story_points?: number; status?: string }>
+    }
   >
   last_sync: string | null
 }

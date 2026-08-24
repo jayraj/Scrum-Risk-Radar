@@ -116,8 +116,11 @@ export default function VelocityTrend({ velocity, syncIntervalSeconds = 300, ref
           <div className="velocity-grid">
             {Object.entries(data).map(([projectKey, sprints]) => (
               <div key={projectKey} className="velocity-project">
-                <div className="velocity-project-header">
-                  <span className="velocity-project-key">{projectKey}</span>
+                <div className="sprint-card-head">
+                  <span className="sprint-card-eyebrow">VELOCITY</span>
+                  <div className="sprint-card-head-row">
+                    <span className="sprint-card-name">{projectKey}</span>
+                  </div>
                 </div>
                 <div className="bar-chart-wrap">
                   <Bar data={chartData(sprints)} options={chartOptions(projectKey)} />
