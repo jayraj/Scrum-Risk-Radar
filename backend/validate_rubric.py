@@ -275,6 +275,35 @@ def run():
     results.append(check("Counter: internal, no fan-out, 2SP", r["risk_score"], 41, tol=3))
 
     # ------------------------------------------------------------------ #
+    # SPRINT_ENDED_INCOMPLETE (overdue sprint still open in Jira)
+    # ------------------------------------------------------------------ #
+    print("\nSPRINT_ENDED_INCOMPLETE")
+    # Ended 1 day ago with incomplete work: 16 SP total, 8 Done, 8 remaining.
+    # raw = 60 + 1*4 + min(8,20)*1.5 = 76 -> HIGH
+    sprint_o = _sprint(days_elapsed=5, duration=4, name="PFIN Sprint 6")
+    issues_o = [_issue("P-1", "Done", 8, 10), _issue("P-2", "To Do", 8, 10)]
+    risks_o = eng.detect_sprint_overdue_risk(sprint_o, issues_o)
+    r = _first(risks_o, "SPRINT_ENDED_INCOMPLETE incomplete")
+    results.append(check("Ended+incomplete: fires SPRINT_ENDED_INCOMPLETE",
+                         1 if r["type"] == "SPRINT_ENDED_INCOMPLETE" else 0, 1, tol=0))
+    results.append(check("Ended+incomplete: score 76 (HIGH)", r["risk_score"], 76))
+    results.append(check("Ended+incomplete: remaining_sp 8", r["remaining_sp"], 8, tol=0))
+
+    # Ended 1 day ago but all work Done in Jira -> still flagged (sprint not closed).
+    # raw = 40 + 1*3 = 43 -> MEDIUM
+    issues_o2 = [_issue("P-1", "Done", 8, 10), _issue("P-2", "Done", 8, 10)]
+    risks_o2 = eng.detect_sprint_overdue_risk(sprint_o, issues_o2)
+    r = _first(risks_o2, "SPRINT_ENDED_INCOMPLETE all-done")
+    results.append(check("Ended+all-Done: still flagged (open past deadline)",
+                         1 if r["type"] == "SPRINT_ENDED_INCOMPLETE" else 0, 1, tol=0))
+    results.append(check("Ended+all-Done: score 43 (MEDIUM)", r["risk_score"], 43))
+
+    # Sprint still in flight -> no overdue risk
+    sprint_live = _sprint(days_elapsed=2, duration=4, name="PFIN Sprint 6")
+    risks_live = eng.detect_sprint_overdue_risk(sprint_live, issues_o)
+    results.append(check("In-flight sprint: no overdue risk", 0 if not risks_live else 1, 0))
+
+    # ------------------------------------------------------------------ #
     # Privacy: LLM prompt sanitization (prompt_privacy)
     # ------------------------------------------------------------------ #
     from prompt_privacy import pseudonymize_assignee, scrub_emails
