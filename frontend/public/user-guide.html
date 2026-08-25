@@ -7,14 +7,18 @@
   <style>
     :root {
       --ink: #1e293b;
+      --secondary: #475569;
       --muted: #64748b;
+      --muted-2: #94a3b8;
       --line: #e2e8f0;
+      --line-soft: #f1f5f9;
       --bg: #f8fafc;
       --card: #ffffff;
       --accent: #2563eb;
-      --green: #10b981;
-      --red: #ef4444;
-      --amber: #d97706;
+      --amber-bg: #fffbeb;
+      --amber-line: #fde68a;
+      --amber-text: #92400e;
+      --shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -24,49 +28,144 @@
       line-height: 1.65;
       font-size: 15px;
     }
-    header { background: #111827; color: #f9fafb; padding: 20px 24px; }
-    header .wrap { max-width: 800px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
-    header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
-    main { max-width: 800px; margin: 0 auto; padding: 32px 24px 64px; }
-    h2 { font-size: 17px; font-weight: 700; margin: 30px 0 10px; letter-spacing: -0.01em; padding-top: 8px; }
-    h3 { font-size: 15px; font-weight: 700; margin: 16px 0 6px; }
-    p, li { color: #334155; }
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+      height: 52px;
+    }
+    header .wrap {
+      max-width: 768px;
+      margin: 0 auto;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+    }
+    .brand-home { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+    .brand-home:hover { opacity: 0.85; }
+    .brand-logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, #2563eb, #1e40af);
+    }
+    .brand-logo svg { color: #ffffff; }
+    .brand-text { display: flex; flex-direction: column; line-height: 1.2; }
+    .brand-name { font-size: 13px; font-weight: 600; color: #0f172a; }
+    .brand-tagline {
+      font-size: 9px;
+      margin-top: 4px;
+      color: #94a3b8;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+    }
+    main { max-width: 768px; margin: 0 auto; padding: 32px 24px 64px; }
+    .guide-breadcrumb {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--secondary);
+      text-decoration: none;
+      margin-bottom: 16px;
+    }
+    .guide-breadcrumb:hover { color: var(--ink); }
+    .page-title { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; }
+    h2 { font-size: 18px; font-weight: 700; margin: 32px 0 12px; letter-spacing: -0.01em; }
+    h3 { font-size: 15px; font-weight: 700; margin: 20px 0 6px; }
+    p, li { color: var(--secondary); }
     ul, ol { padding-left: 22px; margin: 8px 0; }
     li { margin-bottom: 4px; }
     .card {
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 18px 20px;
+      border-radius: 16px;
+      padding: 20px;
       margin-top: 12px;
+      box-shadow: var(--shadow);
     }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
-    th { text-align: left; font-size: 13px; background: #f1f5f9; padding: 10px 14px; }
-    td { font-size: 14px; padding: 10px 14px; border-top: 1px solid var(--line); vertical-align: top; }
-    code { background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-size: 13px; }
-    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
-    .tip { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 14px; margin: 10px 0; color: #1d4ed8; font-size: 14px; }
-    footer { max-width: 800px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-size: 13px; }
-    .back { color: #93c5fd; text-decoration: none; font-size: 14px; }
+    .notice {
+      background: var(--amber-bg);
+      border: 1px solid var(--amber-line);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin: 16px 0;
+      color: var(--amber-text);
+      font-size: 14px;
+      line-height: 1.625;
+    }
+    .table-wrap {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; background: var(--card); }
+    thead tr { background: var(--line-soft); }
+    th {
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      padding: 12px 20px;
+    }
+    td {
+      font-size: 14px;
+      padding: 12px 20px;
+      border-top: 1px solid var(--line);
+      vertical-align: top;
+      color: var(--secondary);
+    }
+    code { background: var(--line-soft); padding: 2px 5px; border-radius: 4px; font-size: 13px; color: #334155; }
+    a { color: var(--accent); }
+    footer { max-width: 768px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-size: 13px; }
+    .back { color: var(--accent); text-decoration: none; font-size: 14px; }
     .back:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
   <header>
     <div class="wrap">
-      <span style="font-size:22px">📖</span>
-      <h1>Agile Comrade — User Guide</h1>
+      <a href="/" class="brand-home" aria-label="Home">
+        <span class="brand-logo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zap strip-brand-logo-icon" aria-hidden="true"><path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z"></path></svg>
+        </span>
+        <span class="brand-text">
+          <span class="brand-name">Agile Comrade</span>
+          <span class="brand-tagline">Your sprint companion</span>
+        </span>
+      </a>
     </div>
   </header>
 
   <main>
+    <a href="/" class="guide-breadcrumb">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
+      Go to Dashboard
+    </a>
+
+    <h1 class="page-title">User Guide</h1>
     <p>Agile Comrade watches your active and upcoming Jira sprints, scores delivery risks
     in real time, and drafts AI mitigation plans — so you can act before a sprint slips.</p>
+
+    <div class="notice">
+      <strong>MVP / demo software.</strong> Agile Comrade is an MVP decision-support tool for
+      Scrum Masters and Delivery Managers: it surfaces potential delivery risks early so teams can
+      investigate and act sooner. AI results are signals, not guarantees — they may contain false
+      positives, miss risks, or lack context.
+    </div>
 
     <h2>1. Get started: connect your workspace</h2>
     <div class="card">
       <ol>
-        <li>Open <strong>⚙️ Settings</strong> and fill the profile form:
+        <li>Open <strong>Settings</strong> and fill the profile form:
           <ul>
             <li><strong>Jira Cloud URL</strong> — e.g. <code>https://your-domain.atlassian.net</code></li>
             <li><strong>Jira email + API token</strong> — create one at
@@ -76,58 +175,69 @@
         </li>
         <li>(Optional) pick an <strong>LLM provider</strong>: Gemini or OpenRouter, with your API key.
             Without it everything still works using built-in rule-based scoring.</li>
-        <li>Click <strong>🔌 Test Connection</strong> to verify auth, story-point field detection and each project's sprint status.</li>
-        <li>Click <strong>💾 Save Profile</strong>. Your access token is stored only in this browser.</li>
+        <li>Click <strong>Test Connection</strong> to verify auth, story-point field detection and each project's sprint status.</li>
+        <li>Click <strong>Save Profile</strong>. Your access token is stored only in this browser.</li>
       </ol>
-      <div class="tip">🔒 Secrets are encrypted at rest; teammate names &amp; emails are pseudonymized before any data reaches AI providers. See the <a href="/privacy.html">privacy notice</a>.</div>
+      <div class="notice">Secrets are encrypted at rest; teammate names &amp; emails are pseudonymized before any data reaches AI providers. See the <a href="/privacy.html">privacy notice</a>.</div>
     </div>
 
     <h2>2. The dashboard</h2>
 
-    <h3>🎯 Risk Radar (current sprints)</h3>
+    <h3>Active Sprints (Risk Scanner)</h3>
     <p>One card per active sprint with its overall risk score and top risk type. Click
     <strong>Details →</strong> to open the sprint view.</p>
 
-    <h3>📋 Sprint Details</h3>
+    <h3>Sprint Details</h3>
     <ul>
-      <li><strong>Severity tabs</strong> (ALL / CRITICAL / HIGH / MEDIUM / LOW) filter the blockers table.</li>
-      <li>Each row shows category, severity, detection reason, affected stories and live status. Click a row to expand its AI mitigation strategy.</li>
-      <li><strong>Mitigate with AI →</strong> generates a full action plan (owner, timeline, success criteria). Plans reference teammates by name — the AI itself only ever sees pseudonyms.</li>
-      <li>If your LLM provider is unreachable, the plan is generated from built-in rules and an amber banner (<strong>⚠️ Rule-based fallback — may be less relevant than AI-generated plans.</strong>) appears above it.</li>
-      <li><strong>💬 Draft Message</strong> writes a polite follow-up for the assignee. Hit 📋 Copy and paste it into the Jira ticket yourself — the app never posts to Jira.</li>
+      <li>Issues are listed with severity, risk type, detection reason, affected stories and live status.</li>
+      <li>Use <strong>Mitigation Plan with AI</strong> (current sprint) or <strong>Scan with AI</strong> (future sprint) — the button sits above the Work Items, and the AI Mitigation Plan card (action items, owner, timeline, success criteria) appears directly below it.</li>
+      <li>If your LLM provider is unreachable, an amber <strong>rule-based fallback</strong> note appears inside the plan card and the plan is built from built-in heuristics instead.</li>
+      <li><strong>💬 Draft Message</strong> writes a polite follow-up for the assignee. Hit <strong>📋 Copy</strong> and paste it into the Jira ticket yourself — the app never posts to Jira.</li>
     </ul>
 
-    <h3>🧭 Future Sprints (readiness)</h3>
-    <p>Before planning begins, run <strong>Analyze Next Sprint Risks</strong> on an upcoming
+    <h3>Future Sprints (readiness)</h3>
+    <p>Before planning begins, run <strong>Scan with AI</strong> on an upcoming
     sprint to surface early warnings: unassigned work, missing story points, thin acceptance
     criteria, overloaded assignees, hidden dependencies.</p>
 
-    <h3>📈 Velocity &amp; 📊 Portfolio</h3>
+    <h3>Velocity Trend &amp; Portfolio Overview</h3>
     <p>Trend views of completed story points per sprint and a cross-project executive summary,
     including an AI stakeholder report you can paste into updates.</p>
 
     <h3>Risk severity colors</h3>
-    <table>
-      <tr><th>Badge</th><th>Meaning</th><th>Suggested response</th></tr>
-      <tr><td><span class="dot" style="background:#ef4444"></span><strong>CRITICAL</strong></td><td>Sprint outcome at serious risk</td><td>Act today; escalate</td></tr>
-      <tr><td><span class="dot" style="background:#d97706"></span><strong>HIGH</strong></td><td>Likely slippage without intervention</td><td>Plan mitigation this week</td></tr>
-      <tr><td><span class="dot" style="background:#f59e0b"></span><strong>MEDIUM</strong></td><td>Watch-list item</td><td>Monitor at stand-up</td></tr>
-      <tr><td><span class="dot" style="background:#10b981"></span><strong>LOW</strong></td><td>No action needed</td><td>—</td></tr>
-    </table>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Badge</th><th>Meaning</th><th>Suggested response</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;background:#ef4444"></span><strong>CRITICAL</strong></td><td>Sprint outcome at serious risk</td><td>Act today; escalate</td></tr>
+          <tr><td><span class="dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;background:#d97706"></span><strong>HIGH</strong></td><td>Likely slippage without intervention</td><td>Plan mitigation this week</td></tr>
+          <tr><td><span class="dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;background:#f59e0b"></span><strong>MEDIUM</strong></td><td>Watch-list item</td><td>Monitor at stand-up</td></tr>
+          <tr><td><span class="dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;background:#10b981"></span><strong>LOW</strong></td><td>No action needed</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
 
     <h2>3. Data freshness</h2>
     <p>The dashboard reads from a cached snapshot refreshed automatically every few minutes,
-    or immediately via <strong>⟳ Sync Now</strong> in the top bar.</p>
+    or immediately via <strong>Sync Now</strong> in the top bar.</p>
 
     <h2>4. Troubleshooting</h2>
-    <table>
-      <tr><th>Symptom</th><th>Fix</th></tr>
-      <tr><td>"No active current sprints"</td><td>Start/schedule a sprint in Jira for the configured projects, then Sync Now.</td></tr>
-      <tr><td>AI analysis fails or is slow</td><td>LLM calls are capped ~45s; if the provider times out the app falls back to rule-based results automatically. Retry or check your LLM key.</td></tr>
-      <tr><td>"Rule-based fallback" label / amber warning above the plan</td><td>AI was unavailable — the mitigation plan comes from built-in rules and may be less specific. Check your LLM key in Settings and retry with Mitigate with AI.</td></tr>
-      <tr><td>Story points show 0</td><td>Your Jira uses a custom field. Set it in Settings (<code>customfield_10102</code>-style); Test Connection verifies it.</td></tr>
-      <tr><td>Test Connection project ❌</td><td>Check the project key spelling and that your Jira account can browse that project.</td></tr>
-    </table>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Symptom</th><th>Fix</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>"No active current sprints"</td><td>Start/schedule a sprint in Jira for the configured projects, then Sync Now.</td></tr>
+          <tr><td>AI analysis fails or is slow</td><td>LLM calls are capped ~45s; if the provider times out the app falls back to rule-based results automatically. Retry or check your LLM key.</td></tr>
+          <tr><td>"Rule-based fallback" note inside the plan</td><td>AI was unavailable — the mitigation plan comes from built-in rules and may be less specific. Check your LLM key in Settings and retry with Mitigation Plan with AI / Scan with AI.</td></tr>
+          <tr><td>Story points show 0</td><td>Your Jira uses a custom field. Set it in Settings (<code>customfield_10102</code>-style); Test Connection verifies it.</td></tr>
+          <tr><td>A project fails the Test Connection check</td><td>Check the project key spelling and that your Jira account can browse that project.</td></tr>
+        </tbody>
+      </table>
+    </div>
 
     <h2>5. Good to know</h2>
     <div class="card">

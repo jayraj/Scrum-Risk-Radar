@@ -1168,6 +1168,7 @@ body {
 
 .empty-profile-cta {
   margin: 0;
+  text-decoration: none;
 }
 
 /* Empty-state messaging — one consistent style app-wide */
