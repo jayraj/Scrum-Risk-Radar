@@ -304,6 +304,22 @@ def run():
     results.append(check("In-flight sprint: no overdue risk", 0 if not risks_live else 1, 0))
 
     # ------------------------------------------------------------------ #
+    # Isolation: one detector raising must not abort the others
+    # ------------------------------------------------------------------ #
+    print("\nDETECTOR ISOLATION")
+    def _boom(self, *a, **k):
+        raise RuntimeError("injected detector failure")
+    eng.detect_scope_creep = _boom
+    iso_sprint = _sprint(days_elapsed=5, duration=4, name="ISO Sprint")
+    iso_issues = [_issue("P-1", "Done", 8, 10), _issue("P-2", "To Do", 8, 10)]
+    iso_data = {"PROJ": {"sprint": iso_sprint, "issues": iso_issues}}
+    iso_risks = eng.calculate_all_risks(iso_data)
+    del eng.detect_scope_creep  # restore real method
+    iso_types = {r["type"] for r in iso_risks}
+    results.append(check("Isolation: overdue detector still runs when scope_creep raises",
+                         1 if "SPRINT_ENDED_INCOMPLETE" in iso_types else 0, 1, tol=0))
+
+    # ------------------------------------------------------------------ #
     # Privacy: LLM prompt sanitization (prompt_privacy)
     # ------------------------------------------------------------------ #
     from prompt_privacy import pseudonymize_assignee, scrub_emails

@@ -66,14 +66,27 @@ class RiskEngine:
                 "scope_history": scope_history.get(sprint.get("name")) if sprint else None,
             }
 
-            risks.extend(self.detect_story_progress_risks(sprint, issues, context))
-            risks.extend(self.detect_burndown_risks(sprint, issues, context))
-            risks.extend(self.detect_qa_bottleneck(sprint, issues, context))
-            risks.extend(self.detect_external_dependencies(issues, context))
-            risks.extend(self.detect_due_date_risks(sprint, issues, context))
-            risks.extend(self.detect_bug_risks(sprint, issues, context))
-            risks.extend(self.detect_scope_creep(sprint, issues, context))
-            risks.extend(self.detect_sprint_overdue_risk(sprint, issues, context))
+            # Run each detector in isolation: a bug in one must not blank the
+            # entire panel. Failure is logged and skipped, the rest still run.
+            detectors = [
+                ("story_progress", lambda: self.detect_story_progress_risks(sprint, issues, context)),
+                ("burndown", lambda: self.detect_burndown_risks(sprint, issues, context)),
+                ("qa_bottleneck", lambda: self.detect_qa_bottleneck(sprint, issues, context)),
+                ("external_dependencies", lambda: self.detect_external_dependencies(issues, context)),
+                ("due_date", lambda: self.detect_due_date_risks(sprint, issues, context)),
+                ("bug", lambda: self.detect_bug_risks(sprint, issues, context)),
+                ("scope_creep", lambda: self.detect_scope_creep(sprint, issues, context)),
+                ("sprint_overdue", lambda: self.detect_sprint_overdue_risk(sprint, issues, context)),
+            ]
+            sprint_name = sprint.get("name") if sprint else project_key
+            for label, fn in detectors:
+                try:
+                    found = fn()
+                    if found:
+                        risks.extend(found)
+                except Exception as e:  # noqa: BLE001 - isolate detector failures
+                    print(f"[WARN] Risk detector '{label}' failed for {sprint_name}: {e}")
+                    continue
 
         return sorted(risks, key=lambda x: x["raw_score"], reverse=True)
 
