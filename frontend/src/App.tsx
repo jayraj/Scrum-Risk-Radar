@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Routes, Route, Link } from 'react-router-dom'
-import { MessageSquareText } from 'lucide-react'
+import { Routes, Route, Link, useLocation, useParams } from 'react-router-dom'
+import { MessageSquare } from 'lucide-react'
 import TopStrip from './components/TopStrip'
 import DashboardHome from './components/DashboardHome'
-import SprintDetails from './components/SprintDetails'
-import FutureSprintDetailsPage from './components/FutureSprintDetailsPage'
+import DetailSidebar, { type DetailSelection } from './components/DetailSidebar'
+import SprintDetailPanel from './components/SprintDetailPanel'
 import ExecutiveDashboard from './components/ExecutiveDashboard'
 import Settings from './components/Settings'
 import { apiSyncNow, FEEDBACK_URL } from './api/client'
@@ -19,9 +19,12 @@ export default function App() {
   const [syncing, setSyncing] = useState(false)
   const [syncIntervalSeconds] = useState(300)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [detail, setDetail] = useState<DetailSelection | null>(null)
   const [disclaimerDismissed, setDisclaimerDismissed] = useState(
     () => localStorage.getItem('srr_disclaimer_dismissed') === '1'
   )
+  const location = useLocation()
+  const detailOpen = detail !== null && location.pathname === '/'
 
   const dismissDisclaimer = () => {
     localStorage.setItem('srr_disclaimer_dismissed', '1')
@@ -59,7 +62,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-container">
+    <div className={`app-container${detailOpen ? ' with-sidebar' : ''}`}>
       <TopStrip
         lastSync={lastSync}
         syncing={syncing}
@@ -114,17 +117,35 @@ export default function App() {
                     </Link>
                   </div>
                 ) : (
-                  <DashboardHome syncIntervalSeconds={syncIntervalSeconds} refreshKey={refreshKey} />
+                  <DashboardHome
+                    syncIntervalSeconds={syncIntervalSeconds}
+                    refreshKey={refreshKey}
+                    onSelectDetail={setDetail}
+                  />
                 )
               }
             />
             <Route
               path="/sprint/:sprintKey"
-              element={<SprintDetails syncIntervalSeconds={syncIntervalSeconds} refreshKey={refreshKey} />}
+              element={
+                <SprintDetailPanel
+                  kind="active"
+                  sprintKey={decodeURIComponent(useParams().sprintKey ?? '')}
+                  syncIntervalSeconds={syncIntervalSeconds}
+                  refreshKey={refreshKey}
+                />
+              }
             />
             <Route
               path="/future/:projectKey"
-              element={<FutureSprintDetailsPage syncIntervalSeconds={syncIntervalSeconds} refreshKey={refreshKey} />}
+              element={
+                <SprintDetailPanel
+                  kind="future"
+                  sprintKey={decodeURIComponent(useParams().projectKey ?? '')}
+                  syncIntervalSeconds={syncIntervalSeconds}
+                  refreshKey={refreshKey}
+                />
+              }
             />
             <Route
               path="/executive"
@@ -136,17 +157,32 @@ export default function App() {
             />
           </Routes>
         </main>
+
+        {detailOpen && (
+          <>
+            <div className="sidebar-backdrop" onClick={() => setDetail(null)} aria-hidden="true" />
+            <DetailSidebar
+              selection={detail}
+              onClose={() => setDetail(null)}
+              syncIntervalSeconds={syncIntervalSeconds}
+              refreshKey={refreshKey}
+            />
+          </>
+        )}
       </div>
 
       <footer className="app-footer">
         {FEEDBACK_URL && (
-          <span>
-            Please leave your valuable feedback{' '}
-            <a href={FEEDBACK_URL} target="_blank" rel="noreferrer">
-              <MessageSquareText size={14} strokeWidth={2} />
-              here
-            </a>.
-          </span>
+          <a
+            href={FEEDBACK_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="footer-feedback"
+            title="Please leave your valuable feedback here"
+          >
+            <MessageSquare size={14} className="footer-feedback-icon" strokeWidth={2} />
+            <span>Please leave your valuable feedback here.</span>
+          </a>
         )}
       </footer>
     </div>

@@ -1,15 +1,17 @@
 import { Link } from 'react-router-dom'
-import { Target } from 'lucide-react'
+import { TriangleAlert } from 'lucide-react'
 import { useSnapshot } from '../hooks/useSnapshot'
 import SprintCard from './SprintCard'
+import SectionHeader from './SectionHeader'
 import type { Blocker } from '../api/client'
 
 interface RiskRadarProps {
   syncIntervalSeconds: number
   refreshKey?: number
+  onSelectDetail?: (selection: { kind: 'active' | 'future'; key: string }) => void
 }
 
-export default function RiskRadar({ syncIntervalSeconds, refreshKey = 0 }: RiskRadarProps) {
+export default function RiskRadar({ syncIntervalSeconds, refreshKey = 0, onSelectDetail }: RiskRadarProps) {
   const { snapshot, loading, error, noProfile } = useSnapshot(syncIntervalSeconds, refreshKey)
 
   const radarData = snapshot?.radar_data ?? []
@@ -32,7 +34,11 @@ export default function RiskRadar({ syncIntervalSeconds, refreshKey = 0 }: RiskR
 
   return (
     <div className="risk-radar">
-      <h2 className="component-title"><Target size={24} className="title-icon" />ACTIVE SPRINT(S)</h2>
+      <SectionHeader
+        title="Active Sprint(s)"
+        count={radarData.length}
+        status={{ label: `${snapshot?.total_risks ?? 0} risks`, tone: 'amber' }}
+      />
       <p className="component-subtitle">Live risk scores for your active sprints — spot stalled tickets, burndown gaps, and fresh bugs early enough to act.</p>
       {radarData.length > 0 && (
         <div className="portfolio-meta">
@@ -52,7 +58,8 @@ export default function RiskRadar({ syncIntervalSeconds, refreshKey = 0 }: RiskR
           )}
           {radarData.length > 0 && hasRisks && (
             <div className="risk-warning-banner">
-              ⚠️ Attention, your one of the sprint is on RISK. Do an assesment proactively !!!!
+              <TriangleAlert size={16} className="risk-warning-icon" />
+              <span>Attention, one of your sprints is at RISK. Do a proactive assessment!</span>
             </div>
           )}
 
@@ -60,7 +67,12 @@ export default function RiskRadar({ syncIntervalSeconds, refreshKey = 0 }: RiskR
             {radarData.map((risk) => {
               const cardBlockers: Blocker[] = blockers.filter((b) => b.sprint_key === risk.sprint_key)
               return (
-                <SprintCard key={risk.sprint_key} data={risk} blockers={cardBlockers} />
+                <SprintCard
+                  key={risk.sprint_key}
+                  data={risk}
+                  blockers={cardBlockers}
+                  onDetails={onSelectDetail ? () => onSelectDetail({ kind: 'active', key: risk.sprint_key }) : undefined}
+                />
               )
             })}
           </div>

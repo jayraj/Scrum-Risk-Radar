@@ -1,14 +1,16 @@
 import { Link } from 'react-router-dom'
-import { Compass } from 'lucide-react'
 import { useSnapshot } from '../hooks/useSnapshot'
 import SprintCard from './SprintCard'
+import SectionHeader from './SectionHeader'
+import { formatDate } from '../utils/format'
 
 interface NextSprintOverviewProps {
   syncIntervalSeconds: number
   refreshKey?: number
+  onSelectDetail?: (selection: { kind: 'active' | 'future'; key: string }) => void
 }
 
-export default function NextSprintOverview({ syncIntervalSeconds, refreshKey = 0 }: NextSprintOverviewProps) {
+export default function NextSprintOverview({ syncIntervalSeconds, refreshKey = 0, onSelectDetail }: NextSprintOverviewProps) {
   const { snapshot, loading, error, noProfile } = useSnapshot(syncIntervalSeconds, refreshKey)
   const projects = snapshot?.next_sprint_overview.projects ?? []
 
@@ -27,7 +29,23 @@ export default function NextSprintOverview({ syncIntervalSeconds, refreshKey = 0
 
   return (
     <div className="next-sprint-overview">
-      <h2 className="component-title"><Compass size={24} className="title-icon" />FUTURE SPRINT(S)</h2>
+      <SectionHeader
+        title="Future Sprint(s)"
+        count={projects.length}
+        status={
+          projects.length > 0
+            ? {
+                label: `Starts ${formatDate(
+                  projects
+                    .map((p) => p.start_date)
+                    .filter(Boolean)
+                    .sort()[0] as string,
+                )}`,
+                tone: 'green',
+              }
+            : undefined
+        }
+      />
       <p className="component-subtitle">A pre-planning health check — catch unassigned, unestimated, or oversized work before day one.</p>
 
       {loading ? (
@@ -40,6 +58,7 @@ export default function NextSprintOverview({ syncIntervalSeconds, refreshKey = 0
               data={project}
               eyebrow="UPCOMING SPRINT"
               detailsTo={`/future/${encodeURIComponent(project.project_key)}`}
+              onDetails={onSelectDetail ? () => onSelectDetail({ kind: 'future', key: project.project_key }) : undefined}
             />
           ))}
         </div>

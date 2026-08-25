@@ -306,11 +306,11 @@ export const apiGenerateMitigations = async (sprintKey: string): Promise<Mitigat
   data.mitigations?.forEach((m: Mitigation) => {
     if (m.ai_used) {
       console.info(
-        `[AgileComrade] AI mitigation | source=LLM | provider=${m.llm?.provider ?? '?'} | sprint=${m.sprint_key}`,
+        `[Agile Comrade] AI mitigation | source=LLM | provider=${m.llm?.provider ?? '?'} | sprint=${m.sprint_key}`,
       )
     } else {
       console.warn(
-        `[AgileComrade] AI mitigation | source=rule-based | provider=${m.llm?.provider ?? '?'} | error=${m.error ?? 'unknown'}`,
+        `[Agile Comrade] AI mitigation | source=rule-based | provider=${m.llm?.provider ?? '?'} | error=${m.error ?? 'unknown'}`,
       )
     }
   })
@@ -324,11 +324,11 @@ export const apiNextSprintRisks = async (projectKey: string): Promise<NextSprint
   const data = (await api.post('/api/next-sprint-risks', { project_key: projectKey })).data
   if (data.ai_used) {
     console.info(
-      `[AgileComrade] AI next-sprint | source=LLM | provider=${data.llm?.provider ?? '?'} | project=${projectKey}`,
+      `[Agile Comrade] AI next-sprint | source=LLM | provider=${data.llm?.provider ?? '?'} | project=${projectKey}`,
     )
   } else {
     console.warn(
-      `[AgileComrade] AI next-sprint | source=rule-based | provider=${data.llm?.provider ?? '?'} | error=${data.error ?? 'unknown'}`,
+      `[Agile Comrade] AI next-sprint | source=rule-based | provider=${data.llm?.provider ?? '?'} | error=${data.error ?? 'unknown'}`,
     )
   }
   return data

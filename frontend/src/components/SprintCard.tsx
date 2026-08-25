@@ -27,9 +27,10 @@ interface SprintCardProps {
   blockers?: Blocker[]
   eyebrow?: string
   detailsTo?: string
+  onDetails?: () => void
 }
 
-export default function SprintCard({ data, blockers = [], eyebrow = 'ACTIVE SPRINT', detailsTo }: SprintCardProps) {
+export default function SprintCard({ data, blockers = [], eyebrow = 'ACTIVE SPRINT', detailsTo, onDetails }: SprintCardProps) {
   const dayLabel = sprintDayLabel(data.start_date, data.end_date)
   const score = data.risk_score ?? 0
   const totalSp = data.total_sp ?? 0
@@ -108,9 +109,15 @@ export default function SprintCard({ data, blockers = [], eyebrow = 'ACTIVE SPRI
             )
           )}
         </div>
-        <Link className="sprint-card-details" to={detailsHref}>
-          Details <ArrowRight size={12} className="sprint-card-details-arrow" />
-        </Link>
+        {onDetails ? (
+          <button className="sprint-card-details" onClick={onDetails}>
+            Details <ArrowRight size={12} className="sprint-card-details-arrow" />
+          </button>
+        ) : (
+          <Link className="sprint-card-details" to={detailsHref}>
+            Details <ArrowRight size={12} className="sprint-card-details-arrow" />
+          </Link>
+        )}
       </div>
     </div>
   )

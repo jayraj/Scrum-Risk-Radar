@@ -5,6 +5,7 @@ import type { Blocker } from '../api/client'
 interface RiskCardItemProps {
   blocker: Blocker
   showDraft?: boolean
+  showCategory?: boolean
   drafting?: boolean
   onDraft?: () => void
   draft?: string
@@ -23,6 +24,7 @@ const SEVERITY_CLASS: Record<string, string> = {
 export default function RiskCardItem({
   blocker,
   showDraft,
+  showCategory,
   drafting,
   onDraft,
   draft,
@@ -33,17 +35,18 @@ export default function RiskCardItem({
   const severity = (blocker.severity || 'MEDIUM').toUpperCase()
   const sevClass = SEVERITY_CLASS[severity] || 'medium'
   const title = riskTitle(blocker)
-  const strategyText = blocker.recommendation
-  const description = strategyText
-    ? `⚡ AI MITIGATION STRATEGY : ${strategyText}`
-    : (blocker.summary || 'No recommendation available.')
+  const description = blocker.recommendation || blocker.summary || 'No recommendation available.'
+  const categoryLabel = blocker.type ? blocker.type.toLowerCase().replace(/_/g, ' ') : ''
   const issueKey = blocker.issue_key
 
   return (
     <div className={`risk-card-item ${sevClass}`}>
       <div className="risk-card-item-header">
         <AlertCircle size={12} className="risk-card-item-icon" />
-        <span className="risk-card-item-sev">{severity.toLowerCase()}</span>
+        <span className="risk-card-item-sev">
+          {severity.toLowerCase()}
+          {showCategory && categoryLabel ? `: ${categoryLabel}` : ''}
+        </span>
       </div>
       <p className="risk-card-item-title">{title}</p>
       <p className="risk-card-item-desc">{description}</p>

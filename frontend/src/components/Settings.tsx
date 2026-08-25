@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PlugZap, Save, X } from 'lucide-react'
+import { ArrowLeft, PlugZap, Save, User, X } from 'lucide-react'
 import {
   apiConfigDefaults,
   apiCreateProfile,
@@ -213,10 +213,11 @@ export default function Settings({ onProfilesChanged, onSelectProfile }: Setting
 
   return (
     <div className="settings-page">
-      <nav className="breadcrumb" aria-label="Navigation">
-        <Link to="/">← Go to Dashboard</Link>
-      </nav>
-      <h2 className="component-title">⚙️ Settings</h2>
+      <Link to="/" className="settings-breadcrumb" aria-label="Navigation">
+        <ArrowLeft size={16} strokeWidth={2} />
+        Go to Dashboard
+      </Link>
+      <h2 className="settings-title">Settings</h2>
       <p className="settings-intro">
         Configure your Jira Cloud workspace and LLM provider. Each profile is stored encrypted in Supabase; the access
         token is kept only in this browser and validated as a hash by the backend.
@@ -226,7 +227,7 @@ export default function Settings({ onProfilesChanged, onSelectProfile }: Setting
         <a className="guide-card" href="/user-guide.html" target="_blank" rel="noreferrer">
           <span className="guide-card-icon">📖</span>
           <span>
-            <strong>New to AgileComrade?</strong>
+            <strong>New to Agile Comrade?</strong>
             <span className="guide-card-sub">Read the User Guide — setup, every dashboard section, and troubleshooting.</span>
           </span>
           <span className="guide-card-arrow">→</span>
@@ -242,16 +243,24 @@ export default function Settings({ onProfilesChanged, onSelectProfile }: Setting
       {profiles.length > 0 && (
         <div className="saved-profiles">
           <h3>Saved profiles (this browser)</h3>
-          {profiles.map((cred) => (
-            <div key={cred.slug} className="saved-profile-row">
-              <span className={`profile-badge ${profileApi.activeSlug() === cred.slug ? 'active' : ''}`}>
-                {profileApi.activeSlug() === cred.slug ? '● ' : ''}{cred.slug}
-              </span>
-              <button className="details-btn" onClick={() => onSelectProfile(cred.slug)}>Activate</button>
-              <button className="details-btn" onClick={() => startEdit(cred)}>Edit</button>
-              <button className="delete-btn" onClick={() => removeProfile(cred)}>Delete</button>
-            </div>
-          ))}
+          {profiles.map((cred) => {
+            const active = profileApi.activeSlug() === cred.slug
+            return (
+              <div key={cred.slug} className="saved-profile-item">
+                <div className="saved-profile-card">
+                  <div className={`profile-avatar ${active ? 'active' : ''}`}>
+                    <User size={26} strokeWidth={2} />
+                    {active && <span className="status-dot" />}
+                  </div>
+                  <div className="profile-name">{cred.slug}</div>
+                </div>
+                <div className="profile-actions">
+                  <button className="settings-row-btn" onClick={() => startEdit(cred)}>Edit</button>
+                  <button className="settings-btn-danger" onClick={() => removeProfile(cred)}>Delete</button>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -329,7 +338,7 @@ export default function Settings({ onProfilesChanged, onSelectProfile }: Setting
               placeholder={defaultModels[form.llm_provider] || 'gemini-flash-latest'}
             />
           </label>
-          <label>
+          <label className="form-full">
             LLM API key {editingSlug && <em>(blank = keep current)</em>}
             <input
               value={form.llm_api_key}
@@ -342,29 +351,29 @@ export default function Settings({ onProfilesChanged, onSelectProfile }: Setting
         </div>
 
         <p className="token-note llm-data-note">
-          ⚠️ On Gemini's <strong>free tier</strong>, Google may use submitted prompts for product improvement —
+          On Gemini's <strong>free tier</strong>, Google may use submitted prompts for product improvement —
           use a paid-tier key if that's unacceptable. For OpenRouter, prefer providers with a
           no-training / zero-retention policy. Issue text may still reach the provider (assignees are pseudonymized).
         </p>
 
         <p className="token-note privacy-note">
-          ℹ️ Saving shares this workspace's sprint data (assignee names, issue summaries and descriptions) with your
+          Saving shares this workspace's sprint data (assignee names, issue summaries and descriptions) with your
           chosen AI provider for analysis. Nothing is ever written back to Jira — follow-up messages are generated for
           you to copy and paste manually. See the{' '}
           <a href="/privacy.html" target="_blank" rel="noreferrer">privacy notice</a>.
         </p>
 
         <div className="form-actions">
-          <button className="generate-btn" onClick={testConnection} disabled={testing || saving}>
+          <button className="settings-btn" onClick={testConnection} disabled={testing || saving}>
             <PlugZap size={16} strokeWidth={2} />
             {testing ? 'Testing...' : 'Test Connection'}
           </button>
-          <button className="sync-btn" onClick={saveProfile} disabled={saving || testing}>
+          <button className="settings-btn-primary" onClick={saveProfile} disabled={saving || testing}>
             <Save size={16} strokeWidth={2} />
             {saving ? 'Saving...' : editingSlug ? 'Update Profile' : 'Save Profile'}
           </button>
           {editingSlug && (
-            <button className="delete-btn" onClick={cancelEdit}>
+            <button className="settings-btn-danger" onClick={cancelEdit}>
               <X size={16} strokeWidth={2} />
               Cancel
             </button>

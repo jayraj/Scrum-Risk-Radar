@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Radar, RefreshCw, Settings } from 'lucide-react'
+import { Zap, RefreshCw, Settings } from 'lucide-react'
 import { type ProfileCred } from '../api/config'
 
 interface TopStripProps {
@@ -22,27 +22,31 @@ export default function TopStrip({
   return (
     <header className="top-strip">
       <Link to="/" className="strip-brand" aria-label="Go to home">
-        <Radar size={24} className="strip-brand-icon" />
+        <span className="strip-brand-logo">
+          <Zap size={13} className="strip-brand-logo-icon" />
+        </span>
         <span className="strip-brand-text">
-          <span className="strip-brand-name">AgileComrade</span>
+          <span className="strip-brand-name">Agile Comrade</span>
           <span className="strip-brand-tagline">Your sprint companion</span>
         </span>
       </Link>
 
       <div className="top-strip-actions">
-        <span className="last-sync">Last sync: {lastSync}</span>
+        <span className="last-sync">
+          Last sync: <span className="last-sync-time">{lastSync}</span>
+        </span>
 
-        <button onClick={onSyncNow} className="sync-btn" disabled={syncing || !activeProfile}>
-          <RefreshCw size={16} className={syncing ? 'spin' : ''} />
-          {syncing ? 'Syncing...' : 'Sync Now'}
+        <button onClick={onSyncNow} className="strip-sync-btn" disabled={syncing || !activeProfile}>
+          <RefreshCw size={14} className={syncing ? 'spin strip-sync-icon' : 'strip-sync-icon'} />
+          <span className="strip-sync-label">{syncing ? 'Syncing...' : 'Sync Now'}</span>
         </button>
 
         <button className="icon-btn profile-btn" title={activeLabel || 'Profile'} aria-label="Active profile">
           <span className="profile-avatar">{(activeProfile ?? '??').slice(0, 2).toUpperCase()}</span>
         </button>
 
-        <Link to="/settings" className="icon-btn settings-btn" aria-label="Settings" title="Settings">
-          <Settings size={20} />
+        <Link to="/settings" className="strip-settings-btn" aria-label="Settings" title="Settings">
+          <Settings size={16} />
         </Link>
       </div>
     </header>

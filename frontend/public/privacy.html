@@ -3,18 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Privacy Notice — AgileComrade</title>
+  <title>Privacy Notice — Agile Comrade</title>
   <style>
     :root {
       --ink: #1e293b;
+      --secondary: #475569;
       --muted: #64748b;
+      --muted-2: #94a3b8;
       --line: #e2e8f0;
+      --line-soft: #f1f5f9;
       --bg: #f8fafc;
       --card: #ffffff;
       --accent: #2563eb;
       --amber-bg: #fffbeb;
       --amber-line: #fde68a;
       --amber-text: #92400e;
+      --shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -25,62 +29,133 @@
       font-size: 15px;
     }
     header {
-      background: #111827;
-      color: #f9fafb;
-      padding: 20px 24px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+      height: 52px;
     }
-    header .wrap { max-width: 800px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
-    header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
-    .brand-home { display: inline-flex; align-items: center; color: inherit; text-decoration: none; }
-    .brand-home:hover { opacity: 0.8; }
-    main { max-width: 800px; margin: 0 auto; padding: 32px 24px 64px; }
-    h2 { font-size: 17px; font-weight: 700; margin: 28px 0 10px; letter-spacing: -0.01em; }
-    p, li { color: #334155; }
+    header .wrap {
+      max-width: 768px;
+      margin: 0 auto;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+    }
+    .brand-home { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+    .brand-home:hover { opacity: 0.85; }
+    .brand-logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, #2563eb, #1e40af);
+    }
+    .brand-logo svg { color: #ffffff; }
+    .brand-text { display: flex; flex-direction: column; line-height: 1.2; }
+    .brand-name { font-size: 13px; font-weight: 600; color: #0f172a; }
+    .brand-tagline {
+      font-size: 9px;
+      margin-top: 4px;
+      color: #94a3b8;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+    }
+    main { max-width: 768px; margin: 0 auto; padding: 32px 24px 64px; }
+    .privacy-breadcrumb {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--secondary);
+      text-decoration: none;
+      margin-bottom: 16px;
+    }
+    .privacy-breadcrumb:hover { color: var(--ink); }
+    .page-title { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; }
+    h2 { font-size: 18px; font-weight: 700; margin: 32px 0 12px; letter-spacing: -0.01em; }
+    p, li { color: var(--secondary); }
     ul { padding-left: 22px; margin: 8px 0; }
+    .last-updated { margin-top: 16px; font-size: 14px; font-style: italic; color: var(--muted-2); }
     .card {
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 18px 20px;
+      border-radius: 16px;
+      padding: 20px;
       margin-top: 12px;
+      box-shadow: var(--shadow);
     }
     .notice {
       background: var(--amber-bg);
       border: 1px solid var(--amber-line);
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 12px 16px;
-      margin: 20px 0;
+      margin: 16px 0;
       color: var(--amber-text);
       font-size: 14px;
+      line-height: 1.625;
     }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
-    th { text-align: left; font-size: 13px; background: #f1f5f9; padding: 10px 14px; }
-    td { font-size: 14px; padding: 10px 14px; border-top: 1px solid var(--line); vertical-align: top; }
-    code { background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-size: 13px; }
-    footer { max-width: 800px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-size: 13px; }
-    .back { color: #93c5fd; text-decoration: none; font-size: 14px; }
-    .back:hover { text-decoration: underline; }
+    .table-wrap {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; background: var(--card); }
+    thead tr { background: var(--line-soft); }
+    th {
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      padding: 12px 20px;
+    }
+    td {
+      font-size: 14px;
+      padding: 12px 20px;
+      border-top: 1px solid var(--line);
+      vertical-align: top;
+      color: var(--secondary);
+    }
+    code { background: var(--line-soft); padding: 2px 5px; border-radius: 4px; font-size: 13px; color: #334155; }
+    a { color: var(--accent); }
   </style>
 </head>
 <body>
   <header>
     <div class="wrap">
       <a href="/" class="brand-home" aria-label="Home">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-radar strip-brand-icon" aria-hidden="true"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"></path><path d="M4 6h.01"></path><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"></path><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"></path><path d="M12 18h.01"></path><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"></path><circle cx="12" cy="12" r="2"></circle><path d="m13.41 10.59 5.66-5.66"></path></svg>
+        <span class="brand-logo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zap strip-brand-logo-icon" aria-hidden="true"><path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z"></path></svg>
+        </span>
+        <span class="brand-text">
+          <span class="brand-name">Agile Comrade</span>
+          <span class="brand-tagline">Your sprint companion</span>
+        </span>
       </a>
-      <h1>AgileComrade — Privacy Notice</h1>
     </div>
   </header>
 
   <main>
+    <a href="/" class="privacy-breadcrumb">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
+      Go to Dashboard
+    </a>
+
+    <h1 class="page-title">Privacy Notice</h1>
     <div class="notice">
-      ⚠️ <strong>MVP / demo software.</strong> AgileComrade is an MVP decision-support tool
+      <strong>MVP / demo software.</strong> Agile Comrade is an MVP decision-support tool
       for Scrum Masters and Delivery Managers: it surfaces potential delivery risks early so teams
       can investigate and act sooner. AI results are signals, not guarantees — they may contain
       false positives, miss risks, or lack context.
     </div>
 
-    <p><em>Last updated: August 2026</em></p>
+    <p class="last-updated">Last updated: August 2026</p>
 
     <h2>1. What we store</h2>
     <div class="card">
@@ -96,29 +171,35 @@
     </div>
 
     <h2>2. Where your data goes</h2>
-    <table>
-      <tr><th>Service</th><th>Purpose</th><th>Data involved</th></tr>
-      <tr>
-        <td>Atlassian Jira Cloud</td>
-        <td>Read sprint &amp; issue data</td>
-        <td>Read-only access to configured projects</td>
-      </tr>
-      <tr>
-        <td>Your configured AI provider</td>
-        <td>Risk analysis &amp; drafts</td>
-        <td>Relevant sprint/issue data (see section 3)</td>
-      </tr>
-      <tr>
-        <td>Supabase</td>
-        <td>Profile &amp; cache storage</td>
-        <td>Profile data, encrypted secrets, cached snapshot</td>
-      </tr>
-      <tr>
-        <td>Vercel</td>
-        <td>Application hosting</td>
-        <td>Standard request logs</td>
-      </tr>
-    </table>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Service</th><th>Purpose</th><th>Data involved</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Atlassian Jira Cloud</td>
+            <td>Read sprint &amp; issue data</td>
+            <td>Read-only access to configured projects</td>
+          </tr>
+          <tr>
+            <td>Your configured AI provider</td>
+            <td>Risk analysis &amp; drafts</td>
+            <td>Relevant sprint/issue data (see section 3)</td>
+          </tr>
+          <tr>
+            <td>Supabase</td>
+            <td>Profile &amp; cache storage</td>
+            <td>Profile data, encrypted secrets, cached snapshot</td>
+          </tr>
+          <tr>
+            <td>Vercel</td>
+            <td>Application hosting</td>
+            <td>Standard request logs</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     <p>You choose the AI provider and model in Settings (e.g., Gemini or OpenRouter).</p>
 
     <h2>3. Data sent to AI providers</h2>
@@ -152,7 +233,7 @@
 
     <h2>5. AI accuracy &amp; third-party providers</h2>
     <div class="card">
-      <p>AgileComrade is an MVP, not an authoritative risk-prediction system: flagged items
+      <p>Agile Comrade is an MVP, not an authoritative risk-prediction system: flagged items
       may not be real risks, and real risks may go undetected. Treat results as
       <em>surface → investigate → apply your delivery judgment → act if warranted</em>.
       Your professional judgment remains the final authority.</p>
@@ -164,7 +245,7 @@
     <h2>6. Retention &amp; your controls</h2>
     <div class="card">
       <ul>
-        <li>Edit or delete your profile anytime from ⚙️ Settings — deletion removes the database row and all cached data immediately.</li>
+        <li>Edit or delete your profile anytime from Settings — deletion removes the database row and all cached data immediately.</li>
         <li>AI analysis runs only when you explicitly trigger it; results are returned to your browser and cached with the snapshot until regenerated or deleted.</li>
         <li>Deleting your profile doesn't retract data already submitted to a third-party AI provider, which remains subject to that provider's retention policies.</li>
       </ul>
@@ -175,9 +256,5 @@
       <p>Privacy questions or deletion requests: <strong><a href="mailto:jaybhatta@yahoo.com">jaybhatta@yahoo.com</a></strong></p>
     </div>
   </main>
-
-  <footer>
-    <a class="back" href="/">← Go to Dashboard</a>
-  </footer>
 </body>
 </html>

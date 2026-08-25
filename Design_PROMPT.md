@@ -1,8 +1,8 @@
-# AgileComrade — Responsive Layout Design Prompt
+# Agile Comrade — Responsive Layout Design Prompt
 
 ## Objective
 
-Transform the current AgileComrade web app from a single full-width purple top
+Transform the current Agile Comrade web app from a single full-width purple top
 bar into a **responsive dashboard layout**: a dark **left hamburger sidebar** for
 navigation plus a slim dark **utility strip** on top. Light content area.
 

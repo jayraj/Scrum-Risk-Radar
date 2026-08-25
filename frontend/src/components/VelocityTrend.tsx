@@ -3,19 +3,20 @@ import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
-  BarElement,
+  PointElement,
+  LineElement,
   Tooltip,
   type ChartData,
   type ChartOptions,
   type TooltipItem,
 } from 'chart.js'
-import { Bar } from 'react-chartjs-2'
-import { TrendingUp } from 'lucide-react'
+import { Line } from 'react-chartjs-2'
 import { useSnapshot } from '../hooks/useSnapshot'
+import SectionHeader from './SectionHeader'
 import type { VelocityData, VelocitySprint } from '../api/client'
 import { shortSprintName } from '../utils/format'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip)
 
 interface VelocityTrendProps {
   /** Pass snapshot velocity directly to skip reading it from the shared poll again. */
@@ -51,7 +52,7 @@ export default function VelocityTrend({ velocity, syncIntervalSeconds = 300, ref
     return (sum / sprints.length).toFixed(1)
   }
 
-  const chartData = (sprints: VelocitySprint[]): ChartData<'bar'> => {
+  const chartData = (sprints: VelocitySprint[]): ChartData<'line'> => {
     const colors = ['#667eea', '#764ba2', '#059669', '#ea8c00', '#dc2626']
     return {
       labels: sprints.map((s) => shortSprintName(s.sprint_key)),
@@ -59,22 +60,26 @@ export default function VelocityTrend({ velocity, syncIntervalSeconds = 300, ref
         {
           label: 'Completed SP',
           data: sprints.map((s) => s.completed_sp || 0),
+          borderColor: colors[0],
           backgroundColor: sprints.map((_, i) => colors[i % colors.length]),
-          borderRadius: 4,
-          maxBarThickness: 40,
+          pointBackgroundColor: sprints.map((_, i) => colors[i % colors.length]),
+          borderWidth: 2,
+          tension: 0.3,
+          pointRadius: 4,
+          fill: false,
         },
       ],
     }
   }
 
-  const chartOptions = (projectKey: string): ChartOptions<'bar'> => ({
+  const chartOptions = (projectKey: string): ChartOptions<'line'> => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          label: (ctx: TooltipItem<'bar'>) => {
+          label: (ctx: TooltipItem<'line'>) => {
             const sprint = (data[projectKey] || []).find(
               (s) => shortSprintName(s.sprint_key) === ctx.label,
             )
@@ -98,9 +103,20 @@ export default function VelocityTrend({ velocity, syncIntervalSeconds = 300, ref
     },
   })
 
+  const projectKeys = Object.keys(data)
+  const allSprints = projectKeys.flatMap((k) => data[k] || [])
+  const overallAvg =
+    allSprints.length > 0
+      ? (allSprints.reduce((acc, s) => acc + (s.completed_sp || 0), 0) / allSprints.length).toFixed(1)
+      : '0'
+
   return (
     <div className="next-sprint-overview">
-      <h2 className="component-title"><TrendingUp size={24} className="title-icon" />VELOCITY TREND</h2>
+      <SectionHeader
+        title="Velocity Trend"
+        count={projectKeys.length}
+        status={projectKeys.length > 0 ? { label: `avg ${overallAvg} SP`, tone: 'green' } : undefined}
+      />
       <p className="component-subtitle">Throughput of completed sprints per project — use the trend to commit realistically in your next planning.</p>
       {Object.keys(data).length === 0 ? (
         <div className="no-data no-data-soft">✅ No completed sprint data available yet.</div>
@@ -123,7 +139,7 @@ export default function VelocityTrend({ velocity, syncIntervalSeconds = 300, ref
                   </div>
                 </div>
                 <div className="bar-chart-wrap">
-                  <Bar data={chartData(sprints)} options={chartOptions(projectKey)} />
+                  <Line data={chartData(sprints)} options={chartOptions(projectKey)} />
                 </div>
               </div>
             ))}
