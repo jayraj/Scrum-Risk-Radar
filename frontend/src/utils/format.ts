@@ -111,6 +111,7 @@ export const formatRiskType = (type: string): string => {
     DUE_DATE_PASSED: '⏰ Due Date Passed',
     BUG_RAISED: '🐛 Bug Raised',
     SCOPE_CREEP: '📈 Scope Creep',
+    SPRINT_ENDED_INCOMPLETE: 'Sprint Ended Incomplete',
   }
   return map[type] || type
 }
@@ -152,10 +153,16 @@ export const sprintDayLabel = (startDate?: string, endDate?: string): string | n
   const end = new Date(endDate)
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null
   const DAY_MS = 86400000
-  const total = Math.max(Math.ceil((end.getTime() - start.getTime()) / DAY_MS), 1)
-  const elapsed = Math.floor((Date.now() - start.getTime()) / DAY_MS) + 1
-  const day = Math.max(1, Math.min(elapsed, total))
-  return `Day ${day}/${total}`
+  const now = Date.now()
+  // Inclusive calendar-day span — stable regardless of the end timestamp's time-of-day.
+  const totalDays = Math.max(Math.floor((end.getTime() - start.getTime()) / DAY_MS) + 1, 1)
+  if (now > end.getTime()) {
+    const daysOverdue = Math.max(1, Math.floor((now - end.getTime()) / DAY_MS))
+    return `Overdue by ${daysOverdue} day${daysOverdue === 1 ? '' : 's'}`
+  }
+  const elapsed = Math.floor((now - start.getTime()) / DAY_MS) + 1
+  const day = Math.max(1, Math.min(elapsed, totalDays))
+  return `Day ${day}/${totalDays}`
 }
 
 export const describeAiFallback = (reason?: string): string => {

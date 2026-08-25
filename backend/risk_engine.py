@@ -73,6 +73,7 @@ class RiskEngine:
             risks.extend(self.detect_due_date_risks(sprint, issues, context))
             risks.extend(self.detect_bug_risks(sprint, issues, context))
             risks.extend(self.detect_scope_creep(sprint, issues, context))
+            risks.extend(self.detect_sprint_overdue_risk(sprint, issues, context))
 
         return sorted(risks, key=lambda x: x["raw_score"], reverse=True)
 
@@ -612,6 +613,62 @@ class RiskEngine:
             "recommendation": " ".join(parts),
         })
 
+        return risks
+
+    # ------------------------------------------------------------------ #
+    # Sprint-level: ended but incomplete (deadline passed, work remains)
+    # ------------------------------------------------------------------ #
+    def detect_sprint_overdue_risk(self, sprint, issues, context=None):
+        """Flag a sprint whose end date has passed but work remains and Jira
+        still lists it as active (not closed).
+
+        Without this, an ended-but-incomplete sprint can show "no risk" because
+        every issue-level detector already assumes an in-flight sprint. It only
+        fires when remaining SP > 0, so a fully-Done sprint stays at zero risk.
+        """
+        risks = []
+        if not sprint:
+            return risks
+        end = to_utc(sprint.get("endDate"))
+        if not end:
+            return risks
+        now = now_utc()
+        if now <= end:
+            return risks
+
+        total_sp = sum(i.get("story_points", 0) or 0 for i in issues)
+        completed_sp = sum(
+            i.get("story_points", 0) or 0
+            for i in issues
+            if i.get("status") == "Done"
+        )
+        remaining_sp = total_sp - completed_sp
+        if remaining_sp <= 0:
+            return risks
+
+        days_overdue = max(1, (now - end).days)
+        # Worse the longer it's overdue and the more work is unfinished.
+        raw = min(100.0, 60 + days_overdue * 4 + min(remaining_sp, 20) * 1.5)
+        score = cap_score(raw)
+
+        risks.append({
+            "type": "SPRINT_ENDED_INCOMPLETE",
+            "sprint_key": sprint.get("name"),
+            "issue_keys": [i.get("key") for i in issues if i.get("status") != "Done"],
+            "total_sp": total_sp,
+            "completed_sp": completed_sp,
+            "remaining_sp": remaining_sp,
+            "days_overdue": days_overdue,
+            "risk_score": score,
+            "raw_score": round(raw, 1),
+            "confidence": 90,
+            "severity": bucket_severity(score),
+            "recommendation": (
+                f"Sprint ended {days_overdue} day(s) ago but {remaining_sp:.0f} SP remain "
+                f"incomplete and it is still open in Jira. Close it out or move the "
+                f"unfinished work to the next sprint."
+            ),
+        })
         return risks
 
     # ------------------------------------------------------------------ #
