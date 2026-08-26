@@ -77,7 +77,10 @@ class JiraFetcher:
                 auth=self.auth, headers=self.headers, timeout=JIRA_TIMEOUT,
             )
             if r.status_code == 200:
-                return r.json().get("timezone")
+                # Jira returns the field as `timeZone` (capital Z); guard both
+                # spellings so we never silently fall back to UTC.
+                me = r.json()
+                return me.get("timeZone") or me.get("timezone")
         except Exception as e:  # noqa: BLE001 - optional enrichment
             logger.warning(f"Could not resolve Jira timezone: {e}")
         return None
