@@ -5,7 +5,6 @@ import TopStrip from './components/TopStrip'
 import DashboardHome from './components/DashboardHome'
 import DetailSidebar, { type DetailSelection } from './components/DetailSidebar'
 import SprintDetailPanel from './components/SprintDetailPanel'
-import ExecutiveDashboard from './components/ExecutiveDashboard'
 import Settings from './components/Settings'
 import { apiSyncNow, FEEDBACK_URL } from './api/client'
 import { profileApi } from './api/config'
@@ -146,10 +145,6 @@ export default function App() {
                   refreshKey={refreshKey}
                 />
               }
-            />
-            <Route
-              path="/executive"
-              element={<ExecutiveDashboard syncIntervalSeconds={syncIntervalSeconds} refreshKey={refreshKey} />}
             />
             <Route
               path="/settings"

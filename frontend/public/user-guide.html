@@ -165,12 +165,17 @@
     <h2>1. Get started: connect your workspace</h2>
     <div class="card">
       <ol>
-        <li>Open <strong>Settings</strong> and fill the profile form:
+         <li>Open <strong>Settings</strong> and fill the profile form:
           <ul>
+            <li><strong>Slug</strong> — a short unique id for this profile (used to switch profiles)</li>
             <li><strong>Jira Cloud URL</strong> — e.g. <code>https://your-domain.atlassian.net</code></li>
             <li><strong>Jira email + API token</strong> — create one at
               <code>id.atlassian.com/manage-profile/security/api-tokens</code></li>
             <li><strong>Project keys</strong> — comma separated, e.g. <code>PFIN, MOS</code></li>
+            <li><strong>Story points field</strong> — the Jira custom field id for story points
+              (e.g. <code>customfield_10102</code>); Test Connection detects it automatically</li>
+            <li><strong>LLM provider</strong> — Gemini or OpenRouter, plus the <strong>Model</strong>
+              and your API key</li>
           </ul>
         </li>
         <li>(Optional) pick an <strong>LLM provider</strong>: Gemini or OpenRouter, with your API key.
@@ -178,19 +183,19 @@
         <li>Click <strong>Test Connection</strong> to verify auth, story-point field detection and each project's sprint status.</li>
         <li>Click <strong>Save Profile</strong>. Your access token is stored only in this browser.</li>
       </ol>
-      <div class="notice">Secrets are encrypted at rest; teammate names &amp; emails are pseudonymized before any data reaches AI providers. See the <a href="/privacy.html">privacy notice</a>.</div>
+       <div class="notice">Secrets are encrypted at rest; assignee names are pseudonymized and emails scrubbed before analysis reaches AI providers (names in free text may still appear). See the <a href="/privacy.html">privacy notice</a>.</div>
     </div>
 
     <h2>2. The dashboard</h2>
 
     <h3>Active Sprints (Risk Scanner)</h3>
-    <p>One card per active sprint with its overall risk score and top risk type. Click
+    <p>One card per active sprint with its overall risk score and per-severity risk counts. Click
     <strong>Details →</strong> to open the sprint view.</p>
 
     <h3>Sprint Details</h3>
-    <ul>
-      <li>Issues are listed with severity, risk type, detection reason, affected stories and live status.</li>
-      <li>Use <strong>Mitigation Plan with AI</strong> (current sprint) or <strong>Scan with AI</strong> (future sprint) — the button sits above the Work Items, and the AI Mitigation Plan card (action items, owner, timeline, success criteria) appears directly below it.</li>
+      <ul>
+        <li>Issues are listed with severity, the issue key, and the AI recommendation. For future sprints the risk type is also shown.</li>
+        <li>Use <strong>Mitigation Plan with AI</strong> (current sprint) or <strong>Scan with AI</strong> (future sprint) — the button sits above the Work Items, and the AI Mitigation Plan card (action items, owner, timeline, success criteria) appears directly below it.</li>
       <li>If your LLM provider is unreachable, an amber <strong>rule-based fallback</strong> note appears inside the plan card and the plan is built from built-in heuristics instead.</li>
       <li><strong>💬 Draft Message</strong> writes a polite follow-up for the assignee. Hit <strong>📋 Copy</strong> and paste it into the Jira ticket yourself — the app never posts to Jira.</li>
     </ul>
@@ -200,9 +205,9 @@
     sprint to surface early warnings: unassigned work, missing story points, thin acceptance
     criteria, overloaded assignees, hidden dependencies.</p>
 
-    <h3>Velocity Trend &amp; Portfolio Overview</h3>
-    <p>Trend views of completed story points per sprint and a cross-project executive summary,
-    including an AI stakeholder report you can paste into updates.</p>
+    <h3>Velocity Trend</h3>
+    <p>Trend view of completed story points per sprint, so you can spot velocity dips before they
+    threaten the next commitment.</p>
 
     <h3>Risk severity colors</h3>
     <div class="table-wrap">
@@ -243,7 +248,7 @@
     <div class="card">
       <ul>
         <li>This is MVP software — avoid connecting production workspaces (see <a href="/privacy.html">privacy notice</a>).</li>
-        <li>Multiple profiles are supported; switch between them from the top bar. Each browser keeps its own tokens.</li>
+        <li>One profile per browser. After you save a workspace connection it shows read-only; choose <strong>Edit Profile</strong> in Settings to change it. Your access token is kept only in this browser.</li>
         <li>Deleting a profile in Settings erases its server-side data immediately.</li>
       </ul>
     </div>

@@ -165,7 +165,7 @@
         <li><strong>Cached sprint snapshot:</strong> issue keys, summaries, truncated descriptions (~500 characters), statuses, story points, assignee names, sprint dates, burndown history, and per-sprint scope baselines (issue-key → points maps).</li>
         <li><strong>Cached AI analyses:</strong> generated mitigation plans are stored with the snapshot until regenerated or deleted.</li>
       </ul>
-      <p>Your Jira API token and LLM API key are encrypted at rest (<code>AES-GCM</code>).
+      <p>Your Jira API token and LLM API key are encrypted at rest (AES via Fernet — AES-128-CBC with HMAC-SHA256).
       Your dashboard access token stays in your browser only — the server keeps just its SHA-256 hash.</p>
       <p>Everything above is deleted when you remove the profile in Settings.</p>
     </div>
@@ -195,7 +195,7 @@
           <tr>
             <td>Vercel</td>
             <td>Application hosting</td>
-            <td>Standard request logs</td>
+            <td>Standard request logs (which may include client IP addresses used for rate-limiting)</td>
           </tr>
         </tbody>
       </table>
@@ -204,13 +204,18 @@
 
     <h2>3. Data sent to AI providers</h2>
     <div class="card">
-      <p>When you trigger an analysis we send relevant Jira data: issue keys, summaries,
-      truncated descriptions (~500 characters), statuses, story points, sprint info, and
-      aggregated sprint metrics (burndown gaps, velocity).</p>
+      <p>When you trigger an analysis we send relevant Jira data: issue keys, summaries
+      (truncated to ~300 characters), descriptions and acceptance criteria (truncated to ~250
+      characters), statuses, story points, sprint info, and aggregated sprint metrics
+      (burndown gaps).</p>
       <ul>
         <li>Assignees are pseudonymized freshly for each request (John Smith → <code>dev-01</code>).</li>
         <li>Email addresses are scrubbed before analysis.</li>
       </ul>
+      <p>For sprint and follow-up analyses this scrubbing is applied to the full payload. The
+      executive stakeholder summary is built only from already-pseudonymized risk/mitigation
+      objects, so review its output before sharing externally — free-text names or details may
+      still appear. As noted above, pseudonymization is not anonymization.</p>
       <div class="notice" style="margin-bottom:0">
         <strong>Important:</strong> pseudonymization is not anonymization — names, customer information
         or other sensitive details may still appear inside free text (summaries/descriptions) and reach
