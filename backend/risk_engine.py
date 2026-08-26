@@ -657,9 +657,11 @@ class RiskEngine:
             if i.get("status") == "Done"
         )
         remaining_sp = total_sp - completed_sp
-        # Calendar-day difference (strip time-of-day) so sprints ending on the
-        # same date show the same overdue count regardless of their end hour.
-        days_overdue = max(1, (now.date() - end.date()).days)
+        # Calendar-day difference in LOCAL time (the board/user timezone). Jira
+        # stores endDate in UTC, so a sprint "ending Aug 24" can serialize to
+        # Aug 23 18:15Z and read as Aug 23 in UTC. Using the local date keeps
+        # sprints that end on the same board date aligned with the frontend label.
+        days_overdue = max(1, (now.astimezone().date() - end.astimezone().date()).days)
 
         if remaining_sp > 0:
             # Worse the longer it's overdue and the more work is unfinished.

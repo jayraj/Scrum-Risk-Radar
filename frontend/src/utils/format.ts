@@ -150,23 +150,22 @@ export const shortSprintName = (name?: string): string => {
 export const sprintDayLabel = (startDate?: string, endDate?: string): string | null => {
   if (!startDate || !endDate) return null
   const DAY_MS = 86400000
-  // Parse only the calendar date (YYYY-MM-DD) and treat it as UTC midnight.
-  // This ignores time-of-day AND any timezone suffix, so sprints ending on the
-  // same date always read identically — matching the backend's UTC parsing
-  // (which is why a no-tz Jira string parsed via `new Date()` here could shift
-  // a sprint's date by the browser's offset and split the counts).
-  const ymd = (s?: string): number | null => {
-    const m = (s || "").match(/^(\d{4})-(\d{2})-(\d{2})/)
-    if (!m) return null
-    const t = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
-    return Number.isNaN(t) ? null : t
+  // Use LOCAL date components so the calendar date matches the user's / Jira
+  // board timezone. Jira stores endDate in UTC, so the UTC date can be a day off
+  // for timezones ahead of UTC (e.g. a sprint "ending Aug 24" stored as
+  // Aug 23 18:15Z is Aug 24 locally). Comparing in local time keeps sprints
+  // that end on the same board date aligned, regardless of their UTC hour.
+  const toLocalMidnight = (s?: string): number | null => {
+    const d = new Date(s || "")
+    if (Number.isNaN(d.getTime())) return null
+    return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
   }
-  const start = ymd(startDate)
-  const end = ymd(endDate)
+  const start = toLocalMidnight(startDate)
+  const end = toLocalMidnight(endDate)
   if (start === null || end === null) return null
 
   const now = new Date()
-  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getUTCDate())
 
   // Inclusive calendar-day span.
   const totalDays = Math.max(Math.floor((end - start) / DAY_MS) + 1, 1)
