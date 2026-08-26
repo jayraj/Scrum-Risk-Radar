@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 # snapshot refresh (Vercel's function limit is the only other backstop).
 JIRA_TIMEOUT = 20
 
+# Cache resolved Jira timezones per (site, account) so we don't call /myself on
+# every snapshot refresh. Keyed by base_url|email; cleared only on process
+# restart (timezone changes are rare enough to tolerate that).
+_TZ_CACHE: dict[str, str] = {}
+
 
 def _get(url, **kwargs):
     kwargs.setdefault("timeout", JIRA_TIMEOUT)
@@ -66,11 +71,23 @@ class JiraFetcher:
         return results
 
     def get_timezone(self) -> str | None:
-        """Return the Jira user's profile timezone (e.g. "Asia/Kolkata").
+        """Return the Jira user's profile timezone (e.g. "Asia/Kathmandu").
 
         Jira stores sprint instants in UTC and displays them in this zone, so
         we use it as the single source of truth for calendar-day math — matching
-        what the user sees in Jira regardless of where the server runs."""
+        what the user sees in Jira regardless of where this server runs. Results
+        are cached per (site, account) so we don't hit /myself on every refresh.
+        """
+        key = self._tz_cache_key()
+        cached = _TZ_CACHE.get(key)
+        if cached is not None:
+            return cached
+        tz = self._fetch_timezone()
+        if tz:  # only cache successes; let transient failures retry next time
+            _TZ_CACHE[key] = tz
+        return tz
+
+    def _fetch_timezone(self) -> str | None:
         try:
             r = _get(
                 f"{self.base_url}/rest/api/3/myself",
@@ -84,6 +101,9 @@ class JiraFetcher:
         except Exception as e:  # noqa: BLE001 - optional enrichment
             logger.warning(f"Could not resolve Jira timezone: {e}")
         return None
+
+    def _tz_cache_key(self) -> str:
+        return f"{self.base_url}|{self.auth[0]}"
 
     def _project_diag(self, project_key) -> dict:
         try:

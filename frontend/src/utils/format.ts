@@ -12,8 +12,6 @@ export const setJiraTimezone = (tz: string | null | undefined): void => {
   displayTimezone = tz || null
 }
 
-export const getJiraTimezone = (): string | null => displayTimezone
-
 export const getRiskColor = (score: number | undefined | null): string => {
   if (score === undefined || score === null) return '#a1a1aa'
   if (score >= 80) return '#ef4444'
@@ -151,7 +149,9 @@ export const formatLastSync = (iso?: string): string => {
   const normalized = /Z$|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`
   const date = new Date(normalized)
   if (Number.isNaN(date.getTime())) return 'Just now'
-  return date.toLocaleTimeString(undefined, { timeZoneName: 'short' })
+  // Render in the Jira timezone so the "last synced" time matches the rest of
+  // the UI (the app's events are tied to the Jira board's clock).
+  return date.toLocaleTimeString(undefined, { timeZone: displayTimezone || undefined, timeZoneName: 'short' })
 }
 
 export const shortSprintName = (name?: string): string => {

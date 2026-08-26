@@ -303,6 +303,38 @@ def run():
     risks_live = eng.detect_sprint_overdue_risk(sprint_live, issues_o)
     results.append(check("In-flight sprint: no overdue risk", 0 if not risks_live else 1, 0))
 
+    # Timezone-aware overdue math: regression lock for the Nepal (+5:45) boundary
+    # where PFIN (23/Aug 18:15Z) and MOS (24/Aug 12:45Z) must both resolve to
+    # 24/Aug in Jira and therefore the SAME days_overdue. In raw UTC they fall on
+    # different calendar days (23 vs 24 Aug) and would wrongly differ by one.
+    tz_pfin = {
+        "name": "PFIN Sprint 6",
+        "startDate": "2026-08-09T18:15:00.000Z",
+        "endDate": "2026-08-23T18:15:00.000Z",
+        "state": "active",
+    }
+    tz_mos = {
+        "name": "MOS Sprint 5",
+        "startDate": "2026-08-10T12:45:00.000Z",
+        "endDate": "2026-08-24T12:45:00.000Z",
+        "state": "active",
+    }
+    tz_issues = [_issue("P-1", "Done", 5, 10), _issue("P-2", "Done", 5, 10)]
+
+    r_pfin_utc = _first(eng.detect_sprint_overdue_risk(tz_pfin, tz_issues), "tz pfin utc")
+    r_mos_utc = _first(eng.detect_sprint_overdue_risk(tz_mos, tz_issues), "tz mos utc")
+    results.append(check("UTC: PFIN vs MOS end dates differ by 1 day",
+                         abs(r_pfin_utc["days_overdue"] - r_mos_utc["days_overdue"]), 1, tol=0))
+
+    r_pfin_kat = _first(eng.detect_sprint_overdue_risk(tz_pfin, tz_issues, None, "Asia/Kathmandu"),
+                        "tz pfin kathmandu")
+    r_mos_kat = _first(eng.detect_sprint_overdue_risk(tz_mos, tz_issues, None, "Asia/Kathmandu"),
+                       "tz mos kathmandu")
+    results.append(check("Kathmandu: PFIN and MOS same days_overdue (both 24/Aug)",
+                         r_pfin_kat["days_overdue"] - r_mos_kat["days_overdue"], 0, tol=0))
+    results.append(check("Kathmandu shifts PFIN boundary (1 day less than UTC)",
+                         r_pfin_utc["days_overdue"] - r_pfin_kat["days_overdue"], 1, tol=0))
+
     # ------------------------------------------------------------------ #
     # Isolation: one detector raising must not abort the others
     # ------------------------------------------------------------------ #
