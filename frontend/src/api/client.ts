@@ -24,21 +24,12 @@ export const api = axios.create({
   timeout: 90000,
 })
 
-// Attach the active profile's slug + token to every request, plus the
-// viewer's timezone so the backend computes overdue/calendar-day counts in
-// the same timezone the browser displays them in (Vercel servers run in UTC,
-// which would otherwise split sprints that end on the same local date).
+// Attach the active profile's slug + token to every request.
 api.interceptors.request.use((config) => {
   const active = profileApi.active()
   if (active) {
     config.headers.set('X-SRR-Profile', active.slug)
     config.headers.set('X-SRR-Token', active.token)
-  }
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-    if (tz) config.headers.set('X-Client-Tz', tz)
-  } catch {
-    /* non-critical: backend falls back to UTC */
   }
   return config
 })
@@ -229,6 +220,9 @@ export interface Snapshot {
     baselines: Record<string, { total_sp: number; captured_at: string; manual?: boolean }>
     history: Record<string, number[]>
   }
+  /** Jira user's profile timezone (e.g. "Asia/Kolkata") — the source of truth
+   * for all calendar-day math so dates match the Jira UI. */
+  jira_timezone?: string
   sprint_data?: Record<
     string,
     {

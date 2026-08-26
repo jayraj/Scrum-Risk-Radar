@@ -65,6 +65,23 @@ class JiraFetcher:
 
         return results
 
+    def get_timezone(self) -> str | None:
+        """Return the Jira user's profile timezone (e.g. "Asia/Kolkata").
+
+        Jira stores sprint instants in UTC and displays them in this zone, so
+        we use it as the single source of truth for calendar-day math — matching
+        what the user sees in Jira regardless of where the server runs."""
+        try:
+            r = _get(
+                f"{self.base_url}/rest/api/3/myself",
+                auth=self.auth, headers=self.headers, timeout=JIRA_TIMEOUT,
+            )
+            if r.status_code == 200:
+                return r.json().get("timezone")
+        except Exception as e:  # noqa: BLE001 - optional enrichment
+            logger.warning(f"Could not resolve Jira timezone: {e}")
+        return None
+
     def _project_diag(self, project_key) -> dict:
         try:
             r = _get(
@@ -352,4 +369,5 @@ def fetch_all(fetcher: JiraFetcher) -> dict:
         "sprint_data": sprint_data,
         "next_sprint_data": next_sprint_data,
         "velocity_data": velocity_data,
+        "jira_timezone": fetcher.get_timezone(),
     }

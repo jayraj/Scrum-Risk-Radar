@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { apiSnapshot, type Snapshot } from '../api/client'
 import { profileApi } from '../api/config'
+import { setJiraTimezone } from '../utils/format'
 
 export interface SnapshotState {
   snapshot: Snapshot | null
@@ -54,6 +55,9 @@ const doFetch = async (): Promise<void> => {
       if (shared) {
         shared.snapshot = data
         shared.error = null
+        // Drive every date display from the Jira timezone so they match the
+        // Jira UI, regardless of the viewer's machine timezone.
+        setJiraTimezone(data.jira_timezone)
         notifyLastSync(data.last_sync)
       }
     })

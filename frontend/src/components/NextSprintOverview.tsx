@@ -49,7 +49,7 @@ export default function NextSprintOverview({ syncIntervalSeconds, refreshKey = 0
       <p className="component-subtitle">A pre-planning health check — catch unassigned, unestimated, or oversized work before day one.</p>
 
       {loading ? (
-        <div className="loading">Loading next sprint data...</div>
+        <div className="loading">Loading upcoming sprint data...</div>
       ) : (
         <div className="sprint-card-grid">
           {projects.map((project) => (

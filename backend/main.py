@@ -95,12 +95,6 @@ def _safe_upstream_error(detail: str) -> str:
 def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
-
-def _client_tz(request: Request) -> str | None:
-    """Viewer's IANA timezone (sent by the frontend) so calendar-day math matches
-    the browser regardless of where this server runs. None if absent."""
-    return request.headers.get("X-Client-Tz") or None
-
 # UserConfig field name -> profile column name (empty value => plain column,
 # "_enc" suffix columns are written encrypted).
 CONFIG_FIELD_MAP = {
@@ -195,7 +189,7 @@ def _trim_sprint_data(data: dict) -> dict:
     return out
 
 
-def _refresh_snapshot(row: dict, config: UserConfig, client_tz: str | None = None):
+def _refresh_snapshot(row: dict, config: UserConfig):
     """Fetch fresh Jira data, recompute risks, persist snapshot + history.
 
     If the Jira fetch comes back completely empty (e.g. transient outage),
@@ -207,6 +201,10 @@ def _refresh_snapshot(row: dict, config: UserConfig, client_tz: str | None = Non
     sprint_data = _trim_sprint_data(data["sprint_data"])
     next_sprint_data = _trim_sprint_data(data["next_sprint_data"])
     velocity_data = data["velocity_data"]
+    # The Jira timezone (from /myself) is the single source of truth for
+    # calendar-day math, so our dates match what the user sees in Jira —
+    # regardless of where this server runs.
+    jira_timezone = data.get("jira_timezone")
 
     if not sprint_data and not next_sprint_data:
         stale = row.get("snapshot")
@@ -284,7 +282,7 @@ def _refresh_snapshot(row: dict, config: UserConfig, client_tz: str | None = Non
         velocity_data=velocity_data,
         burndown_history=burndown_history,
         scope_meta=scope_meta,
-        client_tz=client_tz,
+        jira_timezone=jira_timezone,
     )
 
     snapshot = build_snapshot(
@@ -296,6 +294,7 @@ def _refresh_snapshot(row: dict, config: UserConfig, client_tz: str | None = Non
         mitigations=[],
         last_sync=datetime.utcnow().isoformat(),
         scope_meta=scope_meta,
+        jira_timezone=jira_timezone,
     )
 
     store.update_profile(row["slug"], {
@@ -308,7 +307,7 @@ def _refresh_snapshot(row: dict, config: UserConfig, client_tz: str | None = Non
     return snapshot
 
 
-def _get_or_refresh_snapshot(row: dict, allow_stale: bool = False, client_tz: str | None = None):
+def _get_or_refresh_snapshot(row: dict, allow_stale: bool = False):
     config = UserConfig.from_row(row, decrypt)
     fetched_at = row.get("fetched_at")
     snapshot = row.get("snapshot")
@@ -326,7 +325,7 @@ def _get_or_refresh_snapshot(row: dict, allow_stale: bool = False, client_tz: st
         if fetched_dt and datetime.utcnow() - fetched_dt < timedelta(minutes=settings.sync_interval_minutes):
             return snapshot, config
 
-    return _refresh_snapshot(row, config, client_tz=client_tz), config
+    return _refresh_snapshot(row, config), config
 
 
 # ------------------------------------------------------------------ #
@@ -618,7 +617,7 @@ def get_snapshot(request: Request):
     if error:
         return error
 
-    snapshot, _ = _get_or_refresh_snapshot(row, client_tz=_client_tz(request))
+    snapshot, _ = _get_or_refresh_snapshot(row)
     return snapshot
 
 
@@ -629,7 +628,7 @@ def sync_now(request: Request):
         return error
 
     config = UserConfig.from_row(row, decrypt)
-    snapshot = _refresh_snapshot(row, config, client_tz=_client_tz(request))
+    snapshot = _refresh_snapshot(row, config)
     return {
         "status": "synced",
         "risks_found": len(snapshot.get("risks", [])),
@@ -661,7 +660,7 @@ def set_scope_baseline(slug: str, request: Request, body: dict = None):
             status_code=400,
         )
 
-    snapshot = _get_or_refresh_snapshot(row, client_tz=_client_tz(request))[0]
+    snapshot = _get_or_refresh_snapshot(row)[0]
     issues_by_sprint = {}
     for data in (snapshot.get("sprint_data") or {}).values():
         sprint = data.get("sprint") or {}
@@ -715,7 +714,7 @@ def generate_mitigations(request: Request, body: dict = None):
         return error
 
     t0 = time.time()
-    snapshot, config = _get_or_refresh_snapshot(row, allow_stale=True, client_tz=_client_tz(request))
+    snapshot, config = _get_or_refresh_snapshot(row, allow_stale=True)
     t_snap = time.time() - t0
     sprint_data = snapshot.get("sprint_data", {})
     lookup = {}
@@ -780,7 +779,7 @@ def next_sprint_risks(request: Request, body: dict = None):
         return JSONResponse({"status": "error", "error": "project_key is required"}, status_code=400)
 
     t0 = time.time()
-    snapshot, config = _get_or_refresh_snapshot(row, allow_stale=True, client_tz=_client_tz(request))
+    snapshot, config = _get_or_refresh_snapshot(row, allow_stale=True)
     t_snap = time.time() - t0
     project_data = snapshot.get("next_sprint_data", {}).get(project_key)
     if not project_data or not project_data.get("sprint"):
@@ -830,7 +829,7 @@ def next_sprint_issues(request: Request, body: dict = None):
     if not project_key:
         return JSONResponse({"status": "error", "error": "project_key is required"}, status_code=400)
 
-    snapshot, config = _get_or_refresh_snapshot(row, client_tz=_client_tz(request))
+    snapshot, config = _get_or_refresh_snapshot(row)
     project_data = snapshot.get("next_sprint_data", {}).get(project_key)
     if not project_data or not project_data.get("sprint"):
         return JSONResponse(
@@ -884,7 +883,7 @@ def generate_followup_message(request: Request, body: dict = None):
         logger.info(f"⏱️ generate_followup_message | fast-path (no snapshot) llm={time.time() - t0:.2f}s issue={issue_key}")
         return result
 
-    snapshot, _ = _get_or_refresh_snapshot(row, client_tz=_client_tz(request))
+    snapshot, _ = _get_or_refresh_snapshot(row)
     blocker = next(
         (r for r in snapshot.get("risks", []) if r.get("issue_key") == issue_key),
         {},
@@ -904,7 +903,7 @@ def stakeholder_report(request: Request):
     if error:
         return error
 
-    snapshot, config = _get_or_refresh_snapshot(row, client_tz=_client_tz(request))
+    snapshot, config = _get_or_refresh_snapshot(row)
     agent = MitigationAgent(config)
     report = agent.generate_stakeholder_report(
         snapshot.get("risks", []),

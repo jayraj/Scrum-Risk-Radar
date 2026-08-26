@@ -1,6 +1,19 @@
 // Severity palette anchored to the design-system semantic tokens:
 // CRITICAL = error (#ef4444), MEDIUM = warning (#f59e0b), LOW = success (#10b981).
 // HIGH uses a deepened warning (#d97706) to keep the four tiers distinguishable.
+
+// The Jira timezone (from the user's Jira profile, carried on the snapshot) is
+// the single source of truth for calendar-day math, so every date we show
+// matches what the user sees in Jira — regardless of the viewer's machine tz.
+// null => fall back to the browser's local timezone (pre-sync / unknown).
+let displayTimezone: string | null = null
+
+export const setJiraTimezone = (tz: string | null | undefined): void => {
+  displayTimezone = tz || null
+}
+
+export const getJiraTimezone = (): string | null => displayTimezone
+
 export const getRiskColor = (score: number | undefined | null): string => {
   if (score === undefined || score === null) return '#a1a1aa'
   if (score >= 80) return '#ef4444'
@@ -121,16 +134,16 @@ export const splitItems = (text?: string): string[] => {
   return text.split(';').map((s) => s.trim()).filter(Boolean)
 }
 
-export const formatDate = (iso?: string): string => {
+export const formatDate = (iso?: string, tz: string | null = displayTimezone): string => {
   if (!iso) return 'N/A'
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return 'N/A'
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: tz || undefined })
 }
 
-export const formatDateTime = (iso?: string): string => {
+export const formatDateTime = (iso?: string, tz: string | null = displayTimezone): string => {
   if (!iso) return ''
-  return new Date(iso).toLocaleString()
+  return new Date(iso).toLocaleString(undefined, { timeZone: tz || undefined })
 }
 
 export const formatLastSync = (iso?: string): string => {
@@ -147,25 +160,42 @@ export const shortSprintName = (name?: string): string => {
   return match ? 'S' + match[1] : name.slice(0, 6)
 }
 
-export const sprintDayLabel = (startDate?: string, endDate?: string): string | null => {
+export const sprintDayLabel = (
+  startDate?: string,
+  endDate?: string,
+  tz: string | null = displayTimezone,
+): string | null => {
   if (!startDate || !endDate) return null
   const DAY_MS = 86400000
-  // Use LOCAL date components so the calendar date matches the user's / Jira
-  // board timezone. Jira stores endDate in UTC, so the UTC date can be a day off
-  // for timezones ahead of UTC (e.g. a sprint "ending Aug 24" stored as
-  // Aug 23 18:15Z is Aug 24 locally). Comparing in local time keeps sprints
-  // that end on the same board date aligned, regardless of their UTC hour.
-  const toLocalMidnight = (s?: string): number | null => {
-    const d = new Date(s || "")
+  // Resolve a UTC instant to its calendar date in `tz` (defaults to the Jira
+  // timezone set via setJiraTimezone). Jira stores endDate in UTC, so a sprint
+  // "ending Aug 24" can serialize to Aug 23 18:15Z and read as Aug 23 in raw
+  // UTC; interpreting it in the Jira timezone keeps sprints that end on the same
+  // board date aligned with what the user sees in Jira.
+  const toTzMidnight = (s?: string): number | null => {
+    if (!s) return null
+    const d = new Date(s)
     if (Number.isNaN(d.getTime())) return null
-    return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz || undefined,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+      .formatToParts(d)
+      .reduce<Record<string, string>>((acc, p) => {
+        if (p.type !== 'literal') acc[p.type] = p.value
+        return acc
+      }, {})
+    if (!parts.year || !parts.month || !parts.day) return null
+    return Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day))
   }
-  const start = toLocalMidnight(startDate)
-  const end = toLocalMidnight(endDate)
+  const start = toTzMidnight(startDate)
+  const end = toTzMidnight(endDate)
   if (start === null || end === null) return null
 
-  const now = new Date()
-  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getUTCDate())
+  const today = toTzMidnight(new Date().toISOString())
+  if (today === null) return null
 
   // Inclusive calendar-day span.
   const totalDays = Math.max(Math.floor((end - start) / DAY_MS) + 1, 1)

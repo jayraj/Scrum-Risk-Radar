@@ -48,7 +48,7 @@ export default function RiskRadar({ syncIntervalSeconds, refreshKey = 0, onSelec
       )}
 
       {loading ? (
-        <div className="loading">Loading risks...</div>
+        <div className="loading">Loading active sprint data...</div>
       ) : (
         <>
           {radarData.length > 0 && !hasRisks && (
