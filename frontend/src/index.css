@@ -592,7 +592,7 @@ body {
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(460px, 100vw);
+  width: min(607px, 100vw);
   display: flex;
   flex-direction: column;
   background: #ffffff;
@@ -2324,7 +2324,7 @@ body {
   }
 
   .detail-sidebar {
-    width: min(460px, 100vw);
+  width: min(607px, 100vw);
   }
 }
 
