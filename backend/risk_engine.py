@@ -5,9 +5,23 @@ capped `risk_score` (for UI/severity) and an uncapped `raw_score` (for
 sprint-to-sprint and ticket-to-ticket ranking/triage).
 """
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 
 from config import settings
+
+
+def _resolve_tz(client_tz: str | None):
+    """Return a tzinfo from a client-supplied IANA timezone name, falling back
+    to UTC when none is provided or unparseable. This keeps the backend's
+    calendar-day math aligned with the viewer's browser regardless of where the
+    server runs (e.g. Vercel = UTC)."""
+    if client_tz:
+        try:
+            return ZoneInfo(client_tz)
+        except Exception:  # noqa: BLE001 - unknown tz string
+            pass
+    return timezone.utc
 from risk_components import (
     STALE_HOURS,
     assignee_factor,
@@ -46,7 +60,7 @@ class RiskEngine:
     # ------------------------------------------------------------------ #
     # Orchestrator
     # ------------------------------------------------------------------ #
-    def calculate_all_risks(self, sprint_data, velocity_data=None, burndown_history=None, scope_meta=None):
+    def calculate_all_risks(self, sprint_data, velocity_data=None, burndown_history=None, scope_meta=None, client_tz=None):
         risks = []
         burndown_history = burndown_history or {}
         scope_meta = scope_meta or {}
@@ -76,7 +90,7 @@ class RiskEngine:
                 ("due_date", lambda: self.detect_due_date_risks(sprint, issues, context)),
                 ("bug", lambda: self.detect_bug_risks(sprint, issues, context)),
                 ("scope_creep", lambda: self.detect_scope_creep(sprint, issues, context)),
-                ("sprint_overdue", lambda: self.detect_sprint_overdue_risk(sprint, issues, context)),
+                ("sprint_overdue", lambda: self.detect_sprint_overdue_risk(sprint, issues, context, client_tz)),
             ]
             sprint_name = sprint.get("name") if sprint else project_key
             for label, fn in detectors:
@@ -631,7 +645,7 @@ class RiskEngine:
     # ------------------------------------------------------------------ #
     # Sprint-level: ended but incomplete (deadline passed, work remains)
     # ------------------------------------------------------------------ #
-    def detect_sprint_overdue_risk(self, sprint, issues, context=None):
+    def detect_sprint_overdue_risk(self, sprint, issues, context=None, client_tz=None):
         """Flag a sprint whose end date has passed but Jira still lists it as
         active (not closed).
 
@@ -657,11 +671,14 @@ class RiskEngine:
             if i.get("status") == "Done"
         )
         remaining_sp = total_sp - completed_sp
-        # Calendar-day difference in LOCAL time (the board/user timezone). Jira
-        # stores endDate in UTC, so a sprint "ending Aug 24" can serialize to
-        # Aug 23 18:15Z and read as Aug 23 in UTC. Using the local date keeps
-        # sprints that end on the same board date aligned with the frontend label.
-        days_overdue = max(1, (now.astimezone().date() - end.astimezone().date()).days)
+        # Calendar-day difference in the VIEWER's timezone (sent by the browser),
+        # so it matches the frontend label exactly. Jira stores endDate in UTC, so
+        # a sprint "ending Aug 24" can serialize to Aug 23 18:15Z and read as Aug
+        # 23 in UTC. The server may run in UTC (e.g. Vercel) while the board/user
+        # is in another zone — using the client tz keeps sprints that end on the
+        # same board date aligned with what the user sees.
+        tz = _resolve_tz(client_tz)
+        days_overdue = max(1, (now.astimezone(tz).date() - end.astimezone(tz).date()).days)
 
         if remaining_sp > 0:
             # Worse the longer it's overdue and the more work is unfinished.

@@ -24,12 +24,21 @@ export const api = axios.create({
   timeout: 90000,
 })
 
-// Attach the active profile's slug + token to every request.
+// Attach the active profile's slug + token to every request, plus the
+// viewer's timezone so the backend computes overdue/calendar-day counts in
+// the same timezone the browser displays them in (Vercel servers run in UTC,
+// which would otherwise split sprints that end on the same local date).
 api.interceptors.request.use((config) => {
   const active = profileApi.active()
   if (active) {
     config.headers.set('X-SRR-Profile', active.slug)
     config.headers.set('X-SRR-Token', active.token)
+  }
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    if (tz) config.headers.set('X-Client-Tz', tz)
+  } catch {
+    /* non-critical: backend falls back to UTC */
   }
   return config
 })
