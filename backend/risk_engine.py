@@ -657,7 +657,9 @@ class RiskEngine:
             if i.get("status") == "Done"
         )
         remaining_sp = total_sp - completed_sp
-        days_overdue = max(1, (now - end).days)
+        # Calendar-day difference (strip time-of-day) so sprints ending on the
+        # same date show the same overdue count regardless of their end hour.
+        days_overdue = max(1, (now.date() - end.date()).days)
 
         if remaining_sp > 0:
             # Worse the longer it's overdue and the more work is unfinished.

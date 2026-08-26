@@ -157,7 +157,12 @@ export const sprintDayLabel = (startDate?: string, endDate?: string): string | n
   // Inclusive calendar-day span — stable regardless of the end timestamp's time-of-day.
   const totalDays = Math.max(Math.floor((end.getTime() - start.getTime()) / DAY_MS) + 1, 1)
   if (now > end.getTime()) {
-    const daysOverdue = Math.max(1, Math.floor((now - end.getTime()) / DAY_MS))
+    // Calendar-day difference (strip time-of-day) so sprints ending on the same
+    // date show the same overdue count regardless of their end timestamp's hour.
+    const nowDate = new Date(now)
+    const endMid = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate())
+    const nowMid = Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate())
+    const daysOverdue = Math.max(1, Math.round((nowMid - endMid) / DAY_MS))
     return `Overdue by ${daysOverdue} day${daysOverdue === 1 ? '' : 's'}`
   }
   const elapsed = Math.floor((now - start.getTime()) / DAY_MS) + 1
