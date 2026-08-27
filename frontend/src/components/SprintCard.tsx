@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Layers, Zap, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react'
-import { sprintDayLabel } from '../utils/format'
+import { sprintDayLabel, severityFromScore } from '../utils/format'
 import SprintGauge from './SprintGauge'
 import type { Blocker } from '../api/client'
 
@@ -37,11 +37,12 @@ export default function SprintCard({ data, blockers = [], eyebrow = 'ACTIVE SPRI
   const completedSp = data.completed_sp ?? 0
   const progressPct = totalSp > 0 ? Math.round((completedSp / totalSp) * 100) : 0
 
+  const sevOf = (b: Blocker) => severityFromScore(b.risk_score) || b.severity || 'MEDIUM'
   const counts = {
-    CRITICAL: blockers.filter((b) => b.severity === 'CRITICAL').length,
-    HIGH: blockers.filter((b) => b.severity === 'HIGH').length,
-    MEDIUM: blockers.filter((b) => b.severity === 'MEDIUM').length,
-    LOW: blockers.filter((b) => b.severity === 'LOW').length,
+    CRITICAL: blockers.filter((b) => sevOf(b) === 'CRITICAL').length,
+    HIGH: blockers.filter((b) => sevOf(b) === 'HIGH').length,
+    MEDIUM: blockers.filter((b) => sevOf(b) === 'MEDIUM').length,
+    LOW: blockers.filter((b) => sevOf(b) === 'LOW').length,
   }
   const totalRisks = counts.CRITICAL + counts.HIGH + counts.MEDIUM + counts.LOW
 

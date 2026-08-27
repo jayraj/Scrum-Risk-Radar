@@ -1,5 +1,5 @@
 import { AlertCircle } from 'lucide-react'
-import { riskTitle, describeAiFallback } from '../utils/format'
+import { riskTitle, describeAiFallback, severityFromScore } from '../utils/format'
 import type { Blocker } from '../api/client'
 
 interface RiskCardItemProps {
@@ -32,7 +32,7 @@ export default function RiskCardItem({
   fallbackReason,
   onCopy,
 }: RiskCardItemProps) {
-  const severity = (blocker.severity || 'MEDIUM').toUpperCase()
+  const severity = (severityFromScore(blocker.risk_score) || blocker.severity || 'MEDIUM').toUpperCase()
   const sevClass = SEVERITY_CLASS[severity] || 'medium'
   const title = riskTitle(blocker)
   const description = blocker.recommendation || blocker.summary || 'No recommendation available.'

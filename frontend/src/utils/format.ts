@@ -16,8 +16,19 @@ export const getRiskColor = (score: number | undefined | null): string => {
   if (score === undefined || score === null) return '#a1a1aa'
   if (score >= 80) return '#ef4444'
   if (score >= 60) return '#d97706'
-  if (score >= 35) return '#f59e0b'
+  if (score >= 20) return '#f59e0b'
   return '#10b981'
+}
+
+// Must mirror backend/risk_components.py:bucket_severity bands so frontend
+// display severity matches the recalibrated backend (LOW<20, MEDIUM 20-59,
+// HIGH 60-79, CRITICAL 80+).
+export const severityFromScore = (score?: number | null): string | null => {
+  if (score === undefined || score === null) return null
+  if (score >= 80) return 'CRITICAL'
+  if (score >= 60) return 'HIGH'
+  if (score >= 20) return 'MEDIUM'
+  return 'LOW'
 }
 
 export interface RiskDetectFields {
@@ -84,7 +95,7 @@ export const ringRiskColor = (score: number | undefined | null): string => {
   if (score === undefined || score === null) return 'ring-low'
   if (score >= 80) return 'ring-crit'
   if (score >= 60) return 'ring-high'
-  if (score >= 35) return 'ring-med'
+  if (score >= 20) return 'ring-med'
   return 'ring-low'
 }
 

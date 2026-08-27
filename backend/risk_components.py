@@ -149,12 +149,12 @@ def is_blocking_map(issues):
 
 
 def bucket_severity(score):
-    """Severity buckets: 0-34 LOW, 35-59 MEDIUM, 60-79 HIGH, 80+ CRITICAL."""
+    """Severity buckets: 0-19 LOW, 20-59 MEDIUM, 60-79 HIGH, 80+ CRITICAL."""
     if score >= 80:
         return "CRITICAL"
     if score >= 60:
         return "HIGH"
-    if score >= 35:
+    if score >= 20:
         return "MEDIUM"
     return "LOW"
 
