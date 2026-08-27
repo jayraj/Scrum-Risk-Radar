@@ -173,39 +173,12 @@ class JiraFetcher:
                 logger.warning(f"No boards found for {project_key}")
                 return None
 
-            logger.info(
-                f"[sprint-resolve] project={project_key} boards="
-                f"{[(b['id'], b.get('name')) for b in boards]}"
-            )
-            for b in boards:
-                try:
-                    b_sprints = _get(
-                        f"{self.base_url}/rest/agile/1.0/board/{b['id']}/sprint",
-                        auth=self.auth, headers=self.headers, timeout=60,
-                    ).json().get("values", [])
-                    b_sp = next((s for s in b_sprints if s.get("state") == state), None)
-                    logger.info(
-                        f"[sprint-resolve] project={project_key} board={b['id']} "
-                        f"({b.get('name')}) {state}_sprint="
-                        f"{b_sp.get('name') if b_sp else None}"
-                    )
-                except Exception as be:  # noqa: BLE001
-                    logger.warning(
-                        f"[sprint-resolve] could not inspect board {b['id']} for {project_key}: {be}"
-                    )
-
             board_id = boards[0]["id"]
             sprints = _get(
                 f"{self.base_url}/rest/agile/1.0/board/{board_id}/sprint",
                 auth=self.auth, headers=self.headers, timeout=60,
             ).json().get("values", [])
-            sprint = next((s for s in sprints if s.get("state") == state), None)
-            logger.info(
-                f"[sprint-resolve] project={project_key} selected_board={board_id} "
-                f"{state}_sprint={sprint.get('name') if sprint else None} "
-                f"state={sprint.get('state') if sprint else None}"
-            )
-            return sprint
+            return next((s for s in sprints if s.get("state") == state), None)
         except Exception as e:
             logger.error(f"Error fetching {state} sprint for {project_key}: {e}")
             return None
@@ -220,9 +193,7 @@ class JiraFetcher:
                 timeout=60,
             )
             response.raise_for_status()
-            raw = response.json().get("issues", [])
-            logger.info(f"[sprint-issues] sprint_id={sprint_id} raw_issues={len(raw)}")
-            return raw
+            return response.json().get("issues", [])
         except Exception as e:
             logger.error(f"Error fetching sprint issues: {e}")
             return []
@@ -246,10 +217,6 @@ class JiraFetcher:
             bundle = self._sprint_bundle(project_key, "active")
             if bundle:
                 all_data[project_key] = bundle
-                logger.info(
-                    f"[sync] project={project_key} sprint={bundle['sprint'].get('name')} "
-                    f"issues={len(bundle['issues'])}"
-                )
         return all_data
 
     def get_next_sprints_data(self):
@@ -258,10 +225,6 @@ class JiraFetcher:
             bundle = self._sprint_bundle(project_key, "future")
             if bundle:
                 all_data[project_key] = bundle
-                logger.info(
-                    f"[sync-next] project={project_key} sprint={bundle['sprint'].get('name')} "
-                    f"issues={len(bundle['issues'])}"
-                )
         return all_data
 
     def get_velocity_data(self, max_sprints=5):
