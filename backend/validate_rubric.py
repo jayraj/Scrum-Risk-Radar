@@ -432,7 +432,38 @@ def run():
     sp_week = _sprint(days_elapsed=7, duration=10, name="MOS Sprint 5")
     week_risks = eng.detect_story_progress_risks(sp_week, [old_ticket], {})
     results.append(check("Story: staleness/score grow with sprint age",
-                         1 if week_risks and week_risks[0]["risk_score"] > s0["risk_score"] else 0, 1, tol=0))
+                          1 if week_risks and week_risks[0]["risk_score"] > s0["risk_score"] else 0, 1, tol=0))
+
+    # ------------------------------------------------------------------ #
+    # SPRINT_NOT_STARTED (sprint-level: active but 0 In Progress)
+    # ------------------------------------------------------------------ #
+    print("\nSPRINT_NOT_STARTED")
+    # Sprint started 3 days ago, every open ticket still in To Do.
+    sp_ns = _sprint(days_elapsed=3, duration=14, name="MOS Sprint 6")
+    todo_only = [
+        _issue("MOS-1", "To Do", 3, 10),
+        _issue("MOS-2", "To Do", 5, 10),
+        _issue("MOS-3", "To Do", 2, 10),
+    ]
+    ns_risks = eng.detect_sprint_no_progress(sp_ns, todo_only, {})
+    r = _first(ns_risks, "SPRINT_NOT_STARTED")
+    results.append(check("NoProgress: active sprint, all To Do fires",
+                         1 if r else 0, 1, tol=0))
+    results.append(check("NoProgress: severity MEDIUM (>=20)",
+                         1 if r and r["severity"] == "MEDIUM" else 0, 1, tol=0))
+
+    # Counter: a sprint with at least one In Progress ticket must stay silent.
+    started = [_issue("MOS-4", "In Progress", 3, 10)] + todo_only
+    results.append(check("NoProgress: one started ticket silences",
+                         len(eng.detect_sprint_no_progress(sp_ns, started, {})), 0, tol=0))
+
+    # Counter: within the grace window (day 1) must not fire.
+    results.append(check("NoProgress: grace window (day 1) silent",
+                         len(eng.detect_sprint_no_progress(_sprint(days_elapsed=1, duration=14), todo_only, {})), 0, tol=0))
+
+    # Counter: a not-yet-started (future) sprint must not fire.
+    results.append(check("NoProgress: pre-start sprint silent",
+                         len(eng.detect_sprint_no_progress(_sprint(days_elapsed=-2, duration=14), todo_only, {})), 0, tol=0))
 
     # ------------------------------------------------------------------ #
     # SCOPE_CREEP

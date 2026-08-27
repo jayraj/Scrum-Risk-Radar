@@ -67,6 +67,7 @@ export const RISK_TYPE_META: Record<string, { label: string }> = {
   BUG_RAISED: { label: '🐛 Bug Raised' },
   SCOPE_CREEP: { label: '📈 Scope Creep' },
   SPRINT_ENDED_INCOMPLETE: { label: 'Sprint Ended Incomplete' },
+  SPRINT_NOT_STARTED: { label: '🚦 Sprint Not Started' },
 }
 
 export const formatRiskType = (type: string): string => {

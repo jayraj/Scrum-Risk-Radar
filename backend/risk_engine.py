@@ -84,6 +84,7 @@ class RiskEngine:
             # entire panel. Failure is logged and skipped, the rest still run.
             detectors = [
                 ("story_progress", lambda: self.detect_story_progress_risks(sprint, issues, context)),
+                ("no_progress", lambda: self.detect_sprint_no_progress(sprint, issues, context)),
                 ("burndown", lambda: self.detect_burndown_risks(sprint, issues, context)),
                 ("qa_bottleneck", lambda: self.detect_qa_bottleneck(sprint, issues, context)),
                 ("external_dependencies", lambda: self.detect_external_dependencies(issues, context)),
@@ -157,6 +158,65 @@ class RiskEngine:
             })
 
         return risks
+
+    # ------------------------------------------------------------------ #
+    # 1b. SPRINT_NOT_STARTED (sprint-level)
+    # ------------------------------------------------------------------ #
+    def detect_sprint_no_progress(self, sprint, issues, context=None):
+        """Flag a sprint that is active but has 0 tickets In Progress.
+
+        Complements STORY_NOT_PROGRESSING (which only catches per-ticket
+        silence): this judges the *progress state* of the whole sprint,
+        independent of each ticket's last-update time, and is not gated by
+        the burndown grace period. A sprint whose every open ticket is still
+        in a "not started" column (To Do / Backlog / Open / ...) after a
+        short grace window is treated as a risk.
+        """
+        if not sprint:
+            return []
+        start = to_utc(sprint.get("startDate"))
+        end = to_utc(sprint.get("endDate"))
+        now = now_utc()
+        if not start or not end or now < start or now > end:
+            return []  # only judge sprints that are currently active
+
+        days_elapsed = (now - start).days
+        if days_elapsed < settings.no_progress_grace_days:
+            return []
+
+        open_issues = [i for i in issues if not is_done(i.get("status"))]
+        if not open_issues:
+            return []
+
+        NOT_STARTED = {"to do", "todo", "backlog", "open", "selected for development"}
+        started = [
+            i for i in open_issues
+            if (i.get("status") or "").strip().lower() not in NOT_STARTED
+        ]
+        if started:
+            return []  # at least one ticket has moved out of the start column
+
+        base = min(settings.no_progress_cap, days_elapsed * settings.no_progress_per_day)
+        tp = time_pressure_multiplier(sprint)
+        raw = base * tp
+        score = cap_score(raw)
+
+        return [{
+            "type": "SPRINT_NOT_STARTED",
+            "sprint_key": sprint.get("name"),
+            "summary": sprint.get("name"),
+            "risk_score": score,
+            "raw_score": round(raw, 1),
+            "confidence": 90,
+            "severity": bucket_severity(score),
+            "recommendation": (
+                f"Sprint '{sprint.get('name')}' started {days_elapsed}d ago but "
+                f"0 of {len(open_issues)} tickets are In Progress (all To Do). "
+                f"Confirm work has kicked off or re-plan scope."
+            ),
+            "days_elapsed": days_elapsed,
+            "open_count": len(open_issues),
+        }]
 
     def _stalled_ticket_score(self, h, issue, issues, avg_sp):
         """Per-ticket stalled formula (used by STORY_NOT_PROGRESSING).

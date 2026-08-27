@@ -98,6 +98,9 @@ class Settings(BaseSettings):
     qa_throughput_window: int = 3  # rolling sprints
     qa_backlog_cap: float = 70.0
     burndown_gap_cap: float = 60.0
+    no_progress_grace_days: int = 2
+    no_progress_per_day: float = 12.0
+    no_progress_cap: float = 60.0
     trend_flat: float = 1.3
     trend_slow: float = 1.0
     trend_fast: float = 0.7
