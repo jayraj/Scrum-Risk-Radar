@@ -1671,34 +1671,6 @@ body {
   color: var(--color-secondary-900);
 }
 
-.profile-avatar {
-  position: relative;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--color-secondary-100);
-  color: var(--color-secondary-600);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid transparent;
-}
-
-.profile-avatar.active {
-  border-color: var(--color-accent-500);
-}
-
-.profile-avatar .status-dot {
-  position: absolute;
-  right: 1px;
-  bottom: 1px;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: var(--color-accent-500);
-  border: 2px solid #fff;
-}
-
 .settings-btn-danger {
   display: inline-flex;
   align-items: center;
