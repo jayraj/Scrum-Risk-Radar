@@ -161,27 +161,16 @@ class JiraFetcher:
     # ------------------------------------------------------------------ #
     # Sprint / issue fetching
     # ------------------------------------------------------------------ #
-    def _get_sprint_by_state(self, project_key, state):
+    def _get_boards(self, project_key):
         try:
-            boards = _get(
+            return _get(
                 f"{self.base_url}/rest/agile/1.0/board",
                 auth=self.auth, headers=self.headers,
                 params={"projectKeyOrId": project_key}, timeout=60,
             ).json().get("values", [])
-
-            if not boards:
-                logger.warning(f"No boards found for {project_key}")
-                return None
-
-            board_id = boards[0]["id"]
-            sprints = _get(
-                f"{self.base_url}/rest/agile/1.0/board/{board_id}/sprint",
-                auth=self.auth, headers=self.headers, timeout=60,
-            ).json().get("values", [])
-            return next((s for s in sprints if s.get("state") == state), None)
         except Exception as e:
-            logger.error(f"Error fetching {state} sprint for {project_key}: {e}")
-            return None
+            logger.error(f"Error fetching boards for {project_key}: {e}")
+            return []
 
     def get_sprint_issues(self, sprint_id):
         jql = f"sprint = {sprint_id} AND type in (Story, Task, Bug)"
@@ -193,7 +182,9 @@ class JiraFetcher:
                 timeout=60,
             )
             response.raise_for_status()
-            return response.json().get("issues", [])
+            raw = response.json().get("issues", [])
+            logger.info(f"[sprint-issues] sprint_id={sprint_id} raw_issues={len(raw)}")
+            return raw
         except Exception as e:
             logger.error(f"Error fetching sprint issues: {e}")
             return []
@@ -202,13 +193,55 @@ class JiraFetcher:
     # Aggregates
     # ------------------------------------------------------------------ #
     def _sprint_bundle(self, project_key, state):
-        sprint = self._get_sprint_by_state(project_key, state)
-        if not sprint:
+        """Build a sprint bundle, merging issues across ALL boards' {state}
+        sprints.
+
+        A project can own multiple boards, each with its own active sprint.
+        Picking boards[0] previously let an empty board shadow the populated
+        one (0 work items in one env, N in another). We now gather the
+        {state} sprint from every board, merge their issues by key, and keep
+        the sprint metadata that contributed the most issues.
+        """
+        boards = self._get_boards(project_key)
+        if not boards:
+            logger.warning(f"No boards found for {project_key}")
             return None
-        raw_issues = self.get_sprint_issues(sprint["id"])
+
+        merged = {}            # issue key -> raw issue (deduped across boards)
+        chosen_sprint = None
+        chosen_count = -1
+        for b in boards:
+            try:
+                sprints = _get(
+                    f"{self.base_url}/rest/agile/1.0/board/{b['id']}/sprint",
+                    auth=self.auth, headers=self.headers, timeout=60,
+                ).json().get("values", [])
+            except Exception as be:  # noqa: BLE001
+                logger.warning(f"Error fetching sprints for board {b['id']} ({project_key}): {be}")
+                continue
+            sprint = next((s for s in sprints if s.get("state") == state), None)
+            if not sprint:
+                logger.info(
+                    f"[sprint-merge] project={project_key} board={b['id']} "
+                    f"({b.get('name')}) {state}_sprint=None"
+                )
+                continue
+            raw = self.get_sprint_issues(sprint["id"])
+            for i in raw:
+                merged[i["key"]] = i
+            logger.info(
+                f"[sprint-merge] project={project_key} board={b['id']} "
+                f"({b.get('name')}) {state}_sprint={sprint.get('name')} issues={len(raw)}"
+            )
+            if len(raw) > chosen_count:
+                chosen_count = len(raw)
+                chosen_sprint = sprint
+
+        if not chosen_sprint:
+            return None
         return {
-            "sprint": sprint,
-            "issues": [self.parse_issue_data(i) for i in raw_issues],
+            "sprint": chosen_sprint,
+            "issues": [self.parse_issue_data(i) for i in merged.values()],
         }
 
     def get_all_sprints_data(self):
@@ -217,6 +250,10 @@ class JiraFetcher:
             bundle = self._sprint_bundle(project_key, "active")
             if bundle:
                 all_data[project_key] = bundle
+                logger.info(
+                    f"[sync] project={project_key} sprint={bundle['sprint'].get('name')} "
+                    f"issues={len(bundle['issues'])}"
+                )
         return all_data
 
     def get_next_sprints_data(self):
@@ -225,6 +262,10 @@ class JiraFetcher:
             bundle = self._sprint_bundle(project_key, "future")
             if bundle:
                 all_data[project_key] = bundle
+                logger.info(
+                    f"[sync-next] project={project_key} sprint={bundle['sprint'].get('name')} "
+                    f"issues={len(bundle['issues'])}"
+                )
         return all_data
 
     def get_velocity_data(self, max_sprints=5):
