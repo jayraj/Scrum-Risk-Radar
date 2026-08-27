@@ -8,7 +8,7 @@ the whole dashboard from a single cached snapshot.
 
 from datetime import datetime, timedelta
 
-from risk_components import to_utc
+from risk_components import is_done, to_utc
 from risk_engine import RiskEngine
 
 SPRINT_LEVEL_RISK_TYPES = ["BURNDOWN_BEHIND", "QA_BOTTLENECK", "BUG_RAISED", "SCOPE_CREEP", "SPRINT_ENDED_INCOMPLETE"]
@@ -70,7 +70,7 @@ def _build_radar_data(sprint_data, risks):
         completed_sp = sum(
             issue.get("story_points", 0)
             for issue in sprint_info.get("issues", [])
-            if issue.get("status") == "Done"
+            if is_done(issue.get("status"))
         )
 
         if not sprint_risks:
@@ -143,7 +143,7 @@ def _build_sprint_overview(sprint_data):
         completed_sp = sum(
             issue.get("story_points", 0)
             for issue in issues
-            if issue.get("status") == "Done"
+            if is_done(issue.get("status"))
         )
         in_progress_sp = sum(
             issue.get("story_points", 0)
@@ -234,7 +234,7 @@ def _build_delivery_health(sprint_data, next_sprint_data, velocity_data, risks, 
 
         issues = data.get("issues", [])
         total_sp = sum(i.get("story_points", 0) for i in issues)
-        completed_sp = sum(i.get("story_points", 0) for i in issues if i.get("status") == "Done")
+        completed_sp = sum(i.get("story_points", 0) for i in issues if is_done(i.get("status")))
         completion_percent = int((completed_sp / total_sp * 100) if total_sp > 0 else 0)
 
         sprint_name = sprint.get("name")

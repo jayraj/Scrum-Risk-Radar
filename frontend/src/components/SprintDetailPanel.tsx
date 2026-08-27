@@ -10,6 +10,7 @@ import {
   X,
 } from 'lucide-react'
 import { useSnapshot } from '../hooks/useSnapshot'
+import { useSync } from '../context/SyncContext'
 import {
   apiGenerateFollowup,
   apiGenerateMitigations,
@@ -36,8 +37,6 @@ export interface SprintDetailPanelProps {
   kind: 'active' | 'future'
   sprintKey: string
   onClose?: () => void
-  syncIntervalSeconds: number
-  refreshKey?: number
 }
 
 const draftToPlainText = (html: string): string =>
@@ -45,13 +44,8 @@ const draftToPlainText = (html: string): string =>
     .replace(/<a\s+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_m, url: string, label: string) => `${label} (${url})`)
     .replace(/<[^>]*>/g, '')
 
-export default function SprintDetailPanel({
-  kind,
-  sprintKey,
-  onClose,
-  syncIntervalSeconds,
-  refreshKey = 0,
-}: SprintDetailPanelProps) {
+export default function SprintDetailPanel({ kind, sprintKey, onClose }: SprintDetailPanelProps) {
+  const { syncIntervalSeconds, refreshKey } = useSync()
   const { snapshot, loading, error, noProfile } = useSnapshot(syncIntervalSeconds, refreshKey)
   const isFuture = kind === 'future'
 
@@ -258,7 +252,7 @@ export default function SprintDetailPanel({
         {sprintBlockers.length > 0 && (
           <section className="detail-section">
             <div className="detail-section-head">
-              <ShieldAlert size={13} style={{ color: '#ef4444' }} />
+              <ShieldAlert size={13} style={{ color: 'var(--badge-critical-text)' }} />
               <h2>Issues</h2>
               <span className="detail-count">{sprintBlockers.length}</span>
             </div>

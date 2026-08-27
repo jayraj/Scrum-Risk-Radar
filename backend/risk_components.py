@@ -20,6 +20,11 @@ def is_qa_status(status):
     return (status or "").strip().lower() in QA_STATUS_NAMES
 
 
+def is_done(status):
+    """True when an issue's status means completed work."""
+    return (status or "").strip().lower() == "done"
+
+
 def to_utc(value):
     """Parse an ISO timestamp to an aware UTC datetime (handles Z and offsets)."""
     if not value:
@@ -121,7 +126,7 @@ def assignee_factor(issues, assignee):
     for issue in issues:
         if issue.get("assignee") != assignee:
             continue
-        if issue.get("status") == "Done":
+        if is_done(issue.get("status")):
             continue
         h = hours_since(issue.get("updated"), now=now)
         if h is not None and h <= STALE_HOURS:

@@ -12,6 +12,7 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 import { useSnapshot } from '../hooks/useSnapshot'
+import { useSync } from '../context/SyncContext'
 import SectionHeader from './SectionHeader'
 import type { VelocityData, VelocitySprint } from '../api/client'
 import { shortSprintName } from '../utils/format'
@@ -21,11 +22,10 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip)
 interface VelocityTrendProps {
   /** Pass snapshot velocity directly to skip reading it from the shared poll again. */
   velocity?: VelocityData
-  syncIntervalSeconds?: number
-  refreshKey?: number
 }
 
-export default function VelocityTrend({ velocity, syncIntervalSeconds = 300, refreshKey = 0 }: VelocityTrendProps) {
+export default function VelocityTrend({ velocity }: VelocityTrendProps) {
+  const { syncIntervalSeconds, refreshKey } = useSync()
   const { snapshot } = useSnapshot(syncIntervalSeconds, refreshKey)
   const data = velocity ?? snapshot?.velocity ?? {}
 
@@ -53,7 +53,7 @@ export default function VelocityTrend({ velocity, syncIntervalSeconds = 300, ref
   }
 
   const chartData = (sprints: VelocitySprint[]): ChartData<'line'> => {
-    const colors = ['#667eea', '#764ba2', '#059669', '#ea8c00', '#dc2626']
+    const colors = ['#667eea', '#764ba2', '#059669', '#ea8c00', '#ef4444']
     return {
       labels: sprints.map((s) => shortSprintName(s.sprint_key)),
       datasets: [
@@ -95,7 +95,7 @@ export default function VelocityTrend({ velocity, syncIntervalSeconds = 300, ref
       y: {
         beginAtZero: true,
         ticks: { precision: 0 },
-        grid: { color: '#f3f4f6' },
+        grid: { color: '#e4e4e7' },
       },
       x: {
         grid: { display: false },

@@ -1,17 +1,17 @@
 import { Link } from 'react-router-dom'
 import { TriangleAlert } from 'lucide-react'
 import { useSnapshot } from '../hooks/useSnapshot'
+import { useSync } from '../context/SyncContext'
 import SprintCard from './SprintCard'
 import SectionHeader from './SectionHeader'
 import type { Blocker } from '../api/client'
 
 interface RiskRadarProps {
-  syncIntervalSeconds: number
-  refreshKey?: number
   onSelectDetail?: (selection: { kind: 'active' | 'future'; key: string }) => void
 }
 
-export default function RiskRadar({ syncIntervalSeconds, refreshKey = 0, onSelectDetail }: RiskRadarProps) {
+export default function RiskRadar({ onSelectDetail }: RiskRadarProps) {
+  const { syncIntervalSeconds, refreshKey } = useSync()
   const { snapshot, loading, error, noProfile } = useSnapshot(syncIntervalSeconds, refreshKey)
 
   const radarData = snapshot?.radar_data ?? []

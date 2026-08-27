@@ -551,13 +551,13 @@ Write a short, friendly follow-up message (2-4 sentences) to {assignee} asking f
             info = self.get_model_info()
             if raw_risks:
                 logger.info(f"🤖 AI identified {len(raw_risks)} early risks for {project_key} next sprint "
-                           f"[{info['provider']} | {info['model']}]")
-            logger.info(f"AI next-sprint | source=LLM | provider={info['provider']} | project={project_key}")
-            result = (raw_risks, True, prompt, text, None)
-            _llm_cache_put(cache_key, result)
-            return result
+                               f"[{info['provider']} | {info['model']}]")
+                logger.info(f"AI next-sprint | source=LLM | provider={info['provider']} | project={project_key}")
+                result = (raw_risks, True, prompt, text, None)
+                _llm_cache_put(cache_key, result)
+                return result
             logger.warning(f"⚠️ AI returned empty risk list for {project_key}. Using rule-based fallback. "
-                           f"[{info['provider']} | {info['model']}]")
+                                   f"[{info['provider']} | {info['model']}]")
             return rule_based_risks, False, prompt, text, None
         except Exception as e:
             info = self.get_model_info()

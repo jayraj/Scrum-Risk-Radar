@@ -5,7 +5,7 @@ capped `risk_score` (for UI/severity) and an uncapped `raw_score` (for
 sprint-to-sprint and ticket-to-ticket ranking/triage).
 """
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, timezone
 from zoneinfo import ZoneInfo
 
 from config import settings
@@ -31,9 +31,9 @@ from risk_components import (
     days_remaining,
     hours_since,
     is_blocking_map,
+    is_done,
     is_qa_status,
     now_utc,
-    pct_sprint_elapsed,
     size_weight,
     time_pressure_multiplier,
     to_utc,
@@ -87,7 +87,7 @@ class RiskEngine:
                 ("burndown", lambda: self.detect_burndown_risks(sprint, issues, context)),
                 ("qa_bottleneck", lambda: self.detect_qa_bottleneck(sprint, issues, context)),
                 ("external_dependencies", lambda: self.detect_external_dependencies(issues, context)),
-                ("due_date", lambda: self.detect_due_date_risks(sprint, issues, context)),
+                ("due_date", lambda: self.detect_due_date_risks(sprint, issues, context, jira_timezone)),
                 ("bug", lambda: self.detect_bug_risks(sprint, issues, context)),
                 ("scope_creep", lambda: self.detect_scope_creep(sprint, issues, context)),
                 ("sprint_overdue", lambda: self.detect_sprint_overdue_risk(sprint, issues, context, jira_timezone)),
@@ -99,7 +99,7 @@ class RiskEngine:
                     if found:
                         risks.extend(found)
                 except Exception as e:  # noqa: BLE001 - isolate detector failures
-                    print(f"[WARN] Risk detector '{label}' failed for {sprint_name}: {e}")
+                    logger.warning(f"Risk detector '{label}' failed for {sprint_name}: {e}")
                     continue
 
         return sorted(risks, key=lambda x: x["raw_score"], reverse=True)
@@ -127,7 +127,7 @@ class RiskEngine:
         for issue in issues:
             key = issue.get("key")
             status = issue.get("status")
-            if not key or status == "Done":
+            if not key or is_done(status):
                 continue
             updated = to_utc(issue.get("updated"))
             if not updated:
@@ -189,9 +189,9 @@ class RiskEngine:
         if not sprint:
             return None
 
-        start_date = self._parse_dt(sprint.get("startDate"))
-        end_date = self._parse_dt(sprint.get("endDate"))
-        now = datetime.utcnow()
+        start_date = to_utc(sprint.get("startDate"))
+        end_date = to_utc(sprint.get("endDate"))
+        now = now_utc()
         if not start_date or not end_date:
             return None
 
@@ -214,7 +214,7 @@ class RiskEngine:
         done_sp = sum(
             issue.get("story_points", 0)
             for issue in issues
-            if issue.get("status") == "Done"
+            if is_done(issue.get("status"))
         )
 
         expected_completion_rate = min(1.0, days_elapsed / sprint_duration)
@@ -255,7 +255,7 @@ class RiskEngine:
         risks.append({
             "type": "BURNDOWN_BEHIND",
             "sprint_key": sprint.get("name"),
-            "issue_keys": [i.get("key") for i in issues if i.get("status") != "Done"],
+            "issue_keys": [i.get("key") for i in issues if not is_done(i.get("status"))],
             "total_sp": data["total_sp"],
             "completed_sp": data["completed_sp"],
             "weighted_completed_sp": data["weighted_completed_sp"],
@@ -340,7 +340,7 @@ class RiskEngine:
             description = (issue.get("description") or "").lower()
             if not any(k in description for k in TRIGGER_KEYWORDS):
                 continue
-            if issue.get("status") == "Done":
+            if is_done(issue.get("status")):
                 continue
 
             if any(k in description for k in EXTERNAL_KEYWORDS):
@@ -377,17 +377,20 @@ class RiskEngine:
     # ------------------------------------------------------------------ #
     # 5. DUE_DATE_PASSED (sprint-level, per-ticket max aggregate)
     # ------------------------------------------------------------------ #
-    def detect_due_date_risks(self, sprint, issues, context=None):
+    def detect_due_date_risks(self, sprint, issues, context=None, jira_timezone=None):
         risks = []
         context = context or {}
         avg_sp = context.get("avg_sp", 0.0)
         blocking_map = context.get("blocking_map", {})
-        today = date.today()
+        # Calendar date in the Jira timezone, so "overdue" matches what the user
+        # sees in Jira (the server may run in a different zone, e.g. UTC vs +5:45).
+        tz = _resolve_tz(jira_timezone)
+        today = now_utc().astimezone(tz).date()
         overdue = []
 
         for issue in issues:
             due_date = issue.get("due_date")
-            if not due_date or issue.get("status") == "Done":
+            if not due_date or is_done(issue.get("status")):
                 continue
             try:
                 due = date.fromisoformat(str(due_date).split("T")[0])
@@ -481,7 +484,7 @@ class RiskEngine:
                 lb in settings.bug_prod_escape_labels for lb in labels
             )
 
-            done = status == "Done"
+            done = is_done(status)
             if done and tier != "P1":
                 continue  # fixed lower-tier defects are normal quality variation
             if done and sprint_end and now > sprint_end:
@@ -668,7 +671,7 @@ class RiskEngine:
         completed_sp = sum(
             i.get("story_points", 0) or 0
             for i in issues
-            if i.get("status") == "Done"
+            if is_done(i.get("status"))
         )
         remaining_sp = total_sp - completed_sp
         # Calendar-day difference in the JIRA timezone (from /myself), so it
@@ -701,7 +704,7 @@ class RiskEngine:
         risks.append({
             "type": "SPRINT_ENDED_INCOMPLETE",
             "sprint_key": sprint.get("name"),
-            "issue_keys": [i.get("key") for i in issues if i.get("status") != "Done"],
+            "issue_keys": [i.get("key") for i in issues if not is_done(i.get("status"))],
             "total_sp": total_sp,
             "completed_sp": completed_sp,
             "remaining_sp": remaining_sp,
@@ -813,11 +816,3 @@ class RiskEngine:
             "overall_sprint_health": max(0, 100 - (len(high_risks) * 20 + len(medium_risks) * 10)),
         }
 
-    @staticmethod
-    def _parse_dt(value):
-        if not value:
-            return None
-        try:
-            return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
-        except Exception:
-            return None

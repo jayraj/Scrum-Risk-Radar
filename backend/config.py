@@ -33,17 +33,12 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-flash-latest"
     openrouter_api_key: str = ""
     openrouter_model: str = "openai/gpt-4o-mini"
-    ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "mistral"
 
     # Risk thresholds (v1 triggers — unchanged; v2 replaces only scoring)
     story_update_threshold_hours: int = 24
     burndown_behind_threshold: float = 10.0  # gap %
     burndown_grace_period_fraction: float = 0.25
-    burndown_score_base: float = 30.0  # unused in v2, kept for reference
-    burndown_score_weight: float = 1.5  # unused in v2, kept for reference
     qa_bottleneck_threshold: int = 2  # stories
-    ai_confidence_threshold: int = 70
 
     # v2 rubric constants
     time_pressure_table: tuple[tuple[float, float], ...] = (
@@ -125,17 +120,8 @@ class Settings(BaseSettings):
     sync_interval_minutes: int = 5
     jira_field_mapping: dict[str, str] = {
         "story_points": "customfield_10102",
-        "qa_column": "In QA Review",
         "blocked_by_field": "customfield_10020",
     }
-
-    @property
-    def projects(self) -> list[str]:
-        return [p.strip() for p in self.jira_projects.split(",") if p.strip()]
-
-    @property
-    def qa_column(self) -> str:
-        return self.jira_field_mapping.get("qa_column", "In QA Review")
 
     @property
     def cors_origin_list(self) -> list[str]:

@@ -1,0 +1,33 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from cryptography.fernet import Fernet
+
+import crypto
+
+
+def setup_module() -> None:
+    crypto.settings.encryption_key = Fernet.generate_key().decode()
+
+
+def test_encrypt_decrypt_roundtrip() -> None:
+    token = "super-secret-jira-token"
+    encrypted = crypto.encrypt(token)
+    assert encrypted != token
+    assert crypto.decrypt(encrypted) == token
+
+
+def test_empty_string() -> None:
+    assert crypto.encrypt("") == ""
+    assert crypto.decrypt("") == ""
+
+
+def test_invalid_token_returns_empty() -> None:
+    assert crypto.decrypt("not-a-valid-token") == ""
+
+
+def test_sha256_hex_is_deterministic() -> None:
+    assert crypto.sha256_hex("abc") == crypto.sha256_hex("abc")
+    assert crypto.sha256_hex("abc") != crypto.sha256_hex("abd")

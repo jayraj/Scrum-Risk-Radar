@@ -51,91 +51,40 @@ export const riskTitle = (risk: RiskDetectFields): string => {
   return risk.sprint_key || risk.type
 }
 
-export const riskDetected = (risk: RiskDetectFields): string => {
-  if (risk.hours_since_update !== undefined && risk.hours_since_update !== null) {
-    return `${Math.round(risk.hours_since_update)}h`
-  }
-  if (risk.days_since_created !== undefined && risk.days_since_created !== null) {
-    return `${Math.round(risk.days_since_created)}d since raised`
-  }
-  if (risk.stalled_issues && risk.stalled_issues.length) {
-    const maxHours = Math.max(...risk.stalled_issues.map((s) => s.hours_since_update))
-    return `${Math.round(maxHours)}h`
-  }
-  if (risk.overdue_issues && risk.overdue_issues.length) {
-    const maxDays = Math.max(...risk.overdue_issues.map((o) => o.days_overdue))
-    return `${maxDays}d overdue`
-  }
-  if (risk.burndown_gap_percent !== undefined && risk.burndown_gap_percent !== null) {
-    return `${risk.burndown_gap_percent}% gap`
-  }
-  if (risk.days_remaining !== undefined && risk.days_remaining !== null) {
-    return `${risk.days_remaining}d left`
-  }
-  if (risk.backlog_clear_days !== undefined && risk.backlog_clear_days !== null) {
-    return `${risk.backlog_clear_days}d`
-  }
-  return '—'
-}
 
-export const severityColor = (severity?: string): string => {
-  switch ((severity || '').toUpperCase()) {
-    case 'CRITICAL':
-      return '#ef4444'
-    case 'HIGH':
-      return '#d97706'
-    case 'MEDIUM':
-      return '#f59e0b'
-    default:
-      return '#10b981'
-  }
-}
 
-export const ringRiskColor = (score: number | undefined | null): string => {
-  if (score === undefined || score === null) return 'ring-low'
-  if (score >= 80) return 'ring-crit'
-  if (score >= 60) return 'ring-high'
-  if (score >= 20) return 'ring-med'
-  return 'ring-low'
-}
-
-export const severityClass = (severity?: string): string =>
-  severity ? severity.toLowerCase() : 'low'
-
-export interface RiskStatus {
-  label: string
-  color: string
-}
-
-/** Status label by severity per design system: CRITICAL/HIGH → ACTIVE, MEDIUM → MONITORING, LOW → MITIGATED. */
-export const riskStatusFor = (severity?: string): RiskStatus => {
-  const s = (severity || '').toUpperCase()
-  if (s === 'CRITICAL' || s === 'HIGH') {
-    return { label: 'ACTIVE', color: severityColor(severity) }
-  }
-  if (s === 'MEDIUM') {
-    return { label: 'MONITORING', color: severityColor('MEDIUM') }
-  }
-  return { label: 'MITIGATED', color: severityColor('LOW') }
+export const RISK_TYPE_META: Record<string, { label: string }> = {
+  STORY_NOT_PROGRESSING: { label: '📍 Not Progressing' },
+  STALLED_TICKETS: { label: '🕒 Stalled Tickets' },
+  BURNDOWN_BEHIND: { label: '📉 Burndown Behind' },
+  QA_BOTTLENECK: { label: '🧪 QA Bottleneck' },
+  EXTERNAL_DEPENDENCY: { label: '🔗 External Dep' },
+  UNASSIGNED: { label: '👤 Unassigned' },
+  UNESTIMATED: { label: '📐 Unestimated' },
+  UNDEFINED_SCOPE: { label: '📝 Undefined Scope' },
+  SIZING_RISK: { label: '🏗️ Oversized' },
+  DUE_DATE_PASSED: { label: '⏰ Due Date Passed' },
+  BUG_RAISED: { label: '🐛 Bug Raised' },
+  SCOPE_CREEP: { label: '📈 Scope Creep' },
+  SPRINT_ENDED_INCOMPLETE: { label: 'Sprint Ended Incomplete' },
 }
 
 export const formatRiskType = (type: string): string => {
-  const map: Record<string, string> = {
-    STORY_NOT_PROGRESSING: '📍 Not Progressing',
-    STALLED_TICKETS: '🕒 Stalled Tickets',
-    BURNDOWN_BEHIND: '📉 Burndown Behind',
-    QA_BOTTLENECK: '🧪 QA Bottleneck',
-    EXTERNAL_DEPENDENCY: '🔗 External Dep',
-    UNASSIGNED: '👤 Unassigned',
-    UNESTIMATED: '📐 Unestimated',
-    UNDEFINED_SCOPE: '📝 Undefined Scope',
-    SIZING_RISK: '🏗️ Oversized',
-    DUE_DATE_PASSED: '⏰ Due Date Passed',
-    BUG_RAISED: '🐛 Bug Raised',
-    SCOPE_CREEP: '📈 Scope Creep',
-    SPRINT_ENDED_INCOMPLETE: 'Sprint Ended Incomplete',
-  }
-  return map[type] || type
+  return RISK_TYPE_META[type]?.label ?? type
+}
+
+const ALLOWED_INLINE_TAGS = /^(a|b|i|u|em|strong|br|ul|ol|li|p|span|code|pre)$/i
+
+export const sanitizeInlineHtml = (html: string): string => {
+  if (!html) return ''
+  let clean = html.replace(/<(script|style)[\s\S]*?<\/(script|style)>/gi, '')
+  clean = clean.replace(/\son\w+="[^"]*"/gi, '')
+  clean = clean.replace(/\son\w+='[^']*'/gi, '')
+  clean = clean.replace(/(href|src)\s*=\s*("javascript:[^"]*"|'javascript:[^']*')/gi, '$1="#"')
+  clean = clean.replace(/<\/?([a-z][a-z0-9]*)\b[^>]*>/gi, (_match, tag: string) =>
+    ALLOWED_INLINE_TAGS.test(tag) ? _match : '',
+  )
+  return clean
 }
 
 export const splitItems = (text?: string): string[] => {
@@ -148,11 +97,6 @@ export const formatDate = (iso?: string, tz: string | null = displayTimezone): s
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return 'N/A'
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: tz || undefined })
-}
-
-export const formatDateTime = (iso?: string, tz: string | null = displayTimezone): string => {
-  if (!iso) return ''
-  return new Date(iso).toLocaleString(undefined, { timeZone: tz || undefined })
 }
 
 export const formatLastSync = (iso?: string): string => {

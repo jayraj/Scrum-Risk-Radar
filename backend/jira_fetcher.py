@@ -6,7 +6,7 @@ from datetime import datetime
 import requests
 
 from config import UserConfig, settings
-from risk_components import is_qa_status
+from risk_components import is_done, is_qa_status
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -238,7 +238,7 @@ class JiraFetcher:
                 raw_issues = self.get_sprint_issues(sprint["id"])
                 issues = [self.parse_issue_data(i) for i in raw_issues]
                 completed_sp = sum(
-                    i.get("story_points", 0) for i in issues if i.get("status") == "Done"
+                    i.get("story_points", 0) for i in issues if is_done(i.get("status"))
                 )
                 total_sp = sum(i.get("story_points", 0) for i in issues)
                 data.append({

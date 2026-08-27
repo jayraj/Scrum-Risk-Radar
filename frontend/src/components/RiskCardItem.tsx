@@ -1,5 +1,5 @@
 import { AlertCircle } from 'lucide-react'
-import { riskTitle, describeAiFallback, severityFromScore } from '../utils/format'
+import { riskTitle, describeAiFallback, severityFromScore, formatRiskType, sanitizeInlineHtml } from '../utils/format'
 import type { Blocker } from '../api/client'
 
 interface RiskCardItemProps {
@@ -36,7 +36,7 @@ export default function RiskCardItem({
   const sevClass = SEVERITY_CLASS[severity] || 'medium'
   const title = riskTitle(blocker)
   const description = blocker.recommendation || blocker.summary || 'No recommendation available.'
-  const categoryLabel = blocker.type ? blocker.type.toLowerCase().replace(/_/g, ' ') : ''
+  const categoryLabel = blocker.type ? formatRiskType(blocker.type) : ''
   const issueKey = blocker.issue_key
 
   return (
@@ -65,7 +65,7 @@ export default function RiskCardItem({
               <button className="copy-btn" onClick={onCopy}>📋 Copy</button>
             </div>
           </div>
-          <p className="draft-text" dangerouslySetInnerHTML={{ __html: draft }} />
+          <p className="draft-text" dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(draft) }} />
           <div className="fallback-note">Paste this into the Jira ticket as a comment.</div>
           {generatedBy === 'rule-based' && (
             <div className="fallback-note">{describeAiFallback(fallbackReason || '')}</div>

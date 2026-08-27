@@ -9,6 +9,7 @@ import Settings from './components/Settings'
 import { apiSyncNow, FEEDBACK_URL } from './api/client'
 import { profileApi } from './api/config'
 import { subscribeLastSync } from './hooks/useSnapshot'
+import { SyncContext } from './context/SyncContext'
 import { formatLastSync } from './utils/format'
 
 export default function App() {
@@ -87,6 +88,7 @@ export default function App() {
         </div>
       )}
 
+      <SyncContext.Provider value={{ syncIntervalSeconds, refreshKey }}>
       <div className="app-body">
         <main className="app-main">
           <Routes>
@@ -116,11 +118,7 @@ export default function App() {
                     </Link>
                   </div>
                 ) : (
-                  <DashboardHome
-                    syncIntervalSeconds={syncIntervalSeconds}
-                    refreshKey={refreshKey}
-                    onSelectDetail={setDetail}
-                  />
+                  <DashboardHome onSelectDetail={setDetail} />
                 )
               }
             />
@@ -130,8 +128,6 @@ export default function App() {
                 <SprintDetailPanel
                   kind="active"
                   sprintKey={decodeURIComponent(useParams().sprintKey ?? '')}
-                  syncIntervalSeconds={syncIntervalSeconds}
-                  refreshKey={refreshKey}
                 />
               }
             />
@@ -141,8 +137,6 @@ export default function App() {
                 <SprintDetailPanel
                   kind="future"
                   sprintKey={decodeURIComponent(useParams().projectKey ?? '')}
-                  syncIntervalSeconds={syncIntervalSeconds}
-                  refreshKey={refreshKey}
                 />
               }
             />
@@ -156,15 +150,11 @@ export default function App() {
         {detailOpen && (
           <>
             <div className="sidebar-backdrop" onClick={() => setDetail(null)} aria-hidden="true" />
-            <DetailSidebar
-              selection={detail}
-              onClose={() => setDetail(null)}
-              syncIntervalSeconds={syncIntervalSeconds}
-              refreshKey={refreshKey}
-            />
+            <DetailSidebar selection={detail} onClose={() => setDetail(null)} />
           </>
         )}
       </div>
+      </SyncContext.Provider>
 
       <footer className="app-footer">
         {FEEDBACK_URL && (

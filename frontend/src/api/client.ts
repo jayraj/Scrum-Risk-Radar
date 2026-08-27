@@ -262,7 +262,6 @@ export interface TestConfigResult {
 // ------------------------------------------------------------------ //
 // Unauthenticated endpoints
 // ------------------------------------------------------------------ //
-export const apiHealth = async (): Promise<HealthInfo> => (await api.get('/api/health')).data
 export const apiConfigDefaults = async (): Promise<{
   provider_options: string[]
   default_models: Record<string, string>
@@ -274,11 +273,6 @@ export const apiCreateProfile = async (body: Record<string, unknown>): Promise<{
   profile: ProfileConfig
   access_token: string
 }> => (await api.post('/api/profiles', body)).data
-
-export const apiVerifyProfile = async (slug: string, token: string): Promise<{
-  status: string
-  profile: ProfileConfig
-}> => (await api.post('/api/profiles/verify', { slug, access_token: token })).data
 
 export const apiTestConfig = async (body: Record<string, unknown>): Promise<{
   status: string
@@ -347,6 +341,3 @@ export const apiGenerateFollowup = async (
       blocker: blocker ?? null,
     })
   ).data
-
-export const apiStakeholderReport = async (): Promise<{ report: string; generated_at: string }> =>
-  (await api.get('/api/stakeholder-report')).data

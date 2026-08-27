@@ -1,16 +1,16 @@
 import { Link } from 'react-router-dom'
 import { useSnapshot } from '../hooks/useSnapshot'
+import { useSync } from '../context/SyncContext'
 import SprintCard from './SprintCard'
 import SectionHeader from './SectionHeader'
 import { formatDate } from '../utils/format'
 
 interface NextSprintOverviewProps {
-  syncIntervalSeconds: number
-  refreshKey?: number
   onSelectDetail?: (selection: { kind: 'active' | 'future'; key: string }) => void
 }
 
-export default function NextSprintOverview({ syncIntervalSeconds, refreshKey = 0, onSelectDetail }: NextSprintOverviewProps) {
+export default function NextSprintOverview({ onSelectDetail }: NextSprintOverviewProps) {
+  const { syncIntervalSeconds, refreshKey } = useSync()
   const { snapshot, loading, error, noProfile } = useSnapshot(syncIntervalSeconds, refreshKey)
   const projects = snapshot?.next_sprint_overview.projects ?? []
 

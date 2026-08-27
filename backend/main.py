@@ -48,6 +48,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
+    logger.error("Unhandled exception: %s", exc, exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"status": "error", "error": "Internal server error"},
+    )
+
+
 store = SupabaseStore()
 
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,39}$")

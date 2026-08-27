@@ -9,23 +9,14 @@ export interface DetailSelection {
 interface DetailSidebarProps {
   selection: DetailSelection
   onClose: () => void
-  syncIntervalSeconds: number
-  refreshKey?: number
 }
 
-export default function DetailSidebar({
-  selection,
-  onClose,
-  syncIntervalSeconds,
-  refreshKey = 0,
-}: DetailSidebarProps) {
+export default function DetailSidebar({ selection, onClose }: DetailSidebarProps) {
   const content: ReactNode = (
     <SprintDetailPanel
       kind={selection.kind}
       sprintKey={decodeURIComponent(selection.key)}
       onClose={onClose}
-      syncIntervalSeconds={syncIntervalSeconds}
-      refreshKey={refreshKey}
     />
   )
 

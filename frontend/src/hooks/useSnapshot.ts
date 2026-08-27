@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useSyncExternalStore } from 'react'
 import { apiSnapshot, type Snapshot } from '../api/client'
 import { profileApi } from '../api/config'
 import { setJiraTimezone } from '../utils/format'
@@ -10,134 +10,113 @@ export interface SnapshotState {
   noProfile: boolean
 }
 
-type LastSyncListener = (lastSync: string | null) => void
-let currentLastSync: string | null = null
-const lastSyncListeners = new Set<LastSyncListener>()
-
-// Shared polling: one fetch + one interval serve every mounted useSnapshot
-// caller for the same profile, instead of N independent poll loops.
-interface SharedState {
-  slug: string
-  intervalMs: number
-  snapshot: Snapshot | null
-  error: string | null
-  loading: boolean
-  inflight: Promise<void> | null
+interface StoreState extends SnapshotState {
+  lastSync: string | null
 }
-type StateListener = () => void
 
-let shared: SharedState | null = null
-const stateListeners = new Set<StateListener>()
-let pollTimer: ReturnType<typeof setInterval> | null = null
+let current: StoreState = {
+  snapshot: null,
+  loading: false,
+  error: null,
+  noProfile: false,
+  lastSync: null,
+}
 
-const getLastSync = (): string | null => currentLastSync
+const listeners = new Set<() => void>()
 
-const subscribeLastSync = (listener: LastSyncListener): (() => void) => {
+const emit = (): void => {
+  listeners.forEach((listener) => listener())
+}
+
+const setStore = (patch: Partial<StoreState>): void => {
+  current = { ...current, ...patch }
+  emit()
+}
+
+const lastSyncListeners = new Set<(lastSync: string | null) => void>()
+
+export const subscribeLastSync = (listener: (lastSync: string | null) => void): (() => void) => {
   lastSyncListeners.add(listener)
+  listener(current.lastSync)
   return () => {
     lastSyncListeners.delete(listener)
   }
 }
 
-const notifyLastSync = (value: string | null) => {
-  currentLastSync = value
-  lastSyncListeners.forEach((listener) => listener(value))
-}
+let pollTimer: ReturnType<typeof setInterval> | null = null
+let activeSlug: string | null = null
+let inflight: Promise<void> | null = null
 
-const notifyState = () => {
-  stateListeners.forEach((listener) => listener())
-}
+const doFetch = (): Promise<void> => {
+  if (!activeSlug) return Promise.resolve()
+  if (inflight) return inflight
 
-const doFetch = async (): Promise<void> => {
-  if (!shared || shared.inflight) return
-  const promise = apiSnapshot()
-    .then((data) => {
-      if (shared) {
-        shared.snapshot = data
-        shared.error = null
-        // Drive every date display from the Jira timezone so they match the
-        // Jira UI, regardless of the viewer's machine timezone.
-        setJiraTimezone(data.jira_timezone)
-        notifyLastSync(data.last_sync)
+  const promise = (async () => {
+    try {
+      const data = await apiSnapshot()
+      setStore({ snapshot: data, error: null, loading: false })
+      setJiraTimezone(data.jira_timezone)
+      if (data.last_sync !== current.lastSync) {
+        current.lastSync = data.last_sync
+        lastSyncListeners.forEach((listener) => listener(data.last_sync))
       }
-    })
-    .catch((err: unknown) => {
-      if (shared) {
-        shared.error = err instanceof Error ? err.message : 'Failed to load snapshot'
-      }
-    })
-    .finally(() => {
-      if (shared) {
-        shared.inflight = null
-        shared.loading = false
-      }
-      notifyState()
-    })
-  shared.inflight = promise
-  await promise
-}
-
-const startPolling = (slug: string, syncIntervalSeconds: number, force: boolean): void => {
-  const intervalMs = Math.max(syncIntervalSeconds, 10) * 1000
-  if (!shared || shared.slug !== slug) {
-    if (pollTimer) {
-      clearInterval(pollTimer)
-      pollTimer = null
+    } catch (err) {
+      setStore({
+        error: err instanceof Error ? err.message : 'Failed to load snapshot',
+        loading: false,
+      })
+    } finally {
+      inflight = null
     }
-    shared = { slug, intervalMs, snapshot: null, error: null, loading: true, inflight: null }
-  }
-  shared.intervalMs = intervalMs
+  })()
+
+  inflight = promise
+  return promise
+}
+
+const startPolling = (slug: string, intervalSeconds: number): void => {
+  activeSlug = slug
+  const intervalMs = Math.max(intervalSeconds, 10) * 1000
   if (!pollTimer) {
-    pollTimer = setInterval(() => void doFetch(), shared.intervalMs)
+    pollTimer = setInterval(() => void doFetch(), intervalMs)
   }
-  if (!shared.snapshot || force) {
-    void doFetch()
+  if (!current.snapshot) {
+    setStore({ loading: true })
   }
+  void doFetch()
 }
 
-const stopPollingIfIdle = (): void => {
-  if (stateListeners.size === 0) {
-    if (pollTimer) {
-      clearInterval(pollTimer)
-      pollTimer = null
-    }
-    shared = null
+const stopPolling = (): void => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
   }
+  activeSlug = null
+  inflight = null
 }
 
 export function useSnapshot(syncIntervalSeconds: number, refreshKey = 0): SnapshotState {
-  const [, setTick] = useState(0)
+  const subscribe = useCallback((callback: () => void) => {
+    listeners.add(callback)
+    return () => {
+      listeners.delete(callback)
+    }
+  }, [])
+
+  const getSnapshot = useCallback(() => current, [])
+
+  const active = profileApi.active()
+  const slug = active?.slug
 
   useEffect(() => {
-    const listener = () => setTick((t) => t + 1)
-    const active = profileApi.active()
-
-    if (!active) {
-      stopPollingIfIdle()
-      return () => {
-        stopPollingIfIdle()
-      }
+    if (!slug) {
+      setStore({ noProfile: true, snapshot: null, loading: false, error: null })
+      stopPolling()
+      return
     }
+    setStore({ noProfile: false })
+    startPolling(slug, syncIntervalSeconds)
+  }, [slug, syncIntervalSeconds, refreshKey])
 
-    stateListeners.add(listener)
-    startPolling(active.slug, syncIntervalSeconds, refreshKey > 0)
-
-    return () => {
-      stateListeners.delete(listener)
-      stopPollingIfIdle()
-    }
-  }, [syncIntervalSeconds, refreshKey])
-
-  if (!profileApi.active()) {
-    return { snapshot: null, loading: false, error: null, noProfile: true }
-  }
-
-  return {
-    snapshot: shared?.snapshot ?? null,
-    loading: shared ? shared.loading && !shared.snapshot : true,
-    error: shared?.error ?? null,
-    noProfile: false,
-  }
+  return useSyncExternalStore(subscribe, getSnapshot)
 }
-
-export { getLastSync, subscribeLastSync }
