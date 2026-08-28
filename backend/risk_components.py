@@ -188,11 +188,15 @@ def qa_throughput_per_day(velocity_data, project_key):
 def trend_factor(burndown_history):
     """1.3 if gap flat/widening, 1.0 shrinking slowly, 0.7 shrinking fast.
 
-    Requires at least 2 prior check-ins; defaults to 1.0 (neutral) otherwise.
+    Requires at least 2 prior check-ins. With insufficient history we assume
+    the gap is flat/widening (1.3) rather than neutral — a fresh instance
+    should flag a behind sprint at least as urgently as a mature one, so
+    severity stays reproducible across environments regardless of how long
+    each has been syncing.
     """
     history = burndown_history or []
     if len(history) < 2:
-        return settings.trend_slow
+        return settings.trend_flat
     latest = history[-1]
     previous = history[-2]
     delta = latest - previous  # negative = shrinking
