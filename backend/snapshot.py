@@ -115,7 +115,7 @@ def _build_radar_data(sprint_data, risks):
             "severity": worst.get("severity"),
             "summary": worst.get("summary", sprint_name),
             "assignee": "N/A",
-            "issue_count": worst.get("count") or len(worst.get("issue_keys", [])),
+            "issue_count": len(details),
             "total_sp": total_sp,
             "completed_sp": completed_sp,
             "burndown_gap_percent": worst.get("burndown_gap_percent"),
