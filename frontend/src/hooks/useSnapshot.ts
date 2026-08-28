@@ -100,6 +100,7 @@ const doFetch = (): Promise<void> => {
           radar_end: radarMos?.end_date,
           radar_total_sp: radarMos?.total_sp,
           radar_completed_sp: radarMos?.completed_sp,
+          burndown_history: (data.burndown_history ?? {})[mos?.sprint?.name ?? ''] ?? 'NONE',
         },
       )
       setStore({ snapshot: data, error: null, loading: false })
