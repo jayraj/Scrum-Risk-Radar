@@ -77,6 +77,31 @@ const doFetch = (): Promise<void> => {
             hours_since_update: b.hours_since_update,
           })),
       )
+      // DEBUG: raw sprint issue inputs for MOS (exposes avg_sp / status mix differences)
+      const mosKey = Object.keys(data.sprint_data ?? {}).find(
+        (k) => (data.sprint_data?.[k]?.sprint?.name ?? '').includes('MOS Sprint 6'),
+      )
+      const mos = mosKey ? data.sprint_data?.[mosKey] : undefined
+      const mosIssues = mos?.issues ?? []
+      const statusHist: Record<string, number> = {}
+      for (const i of mosIssues) {
+        const s = (i.status ?? '?').toString()
+        statusHist[s] = (statusHist[s] ?? 0) + 1
+      }
+      const sps = mosIssues.map((i) => i.story_points ?? 0).filter((x) => x > 0)
+      const radarMos = (data.radar_data ?? []).find((r) => r.sprint_key?.includes('MOS Sprint 6'))
+      console.log(
+        '[debug] MOS Sprint 6 inputs',
+        {
+          issue_count: mosIssues.length,
+          status_hist: statusHist,
+          avg_sp: sps.length ? +(sps.reduce((a, b) => a + b, 0) / sps.length).toFixed(2) : 0,
+          radar_start: radarMos?.start_date,
+          radar_end: radarMos?.end_date,
+          radar_total_sp: radarMos?.total_sp,
+          radar_completed_sp: radarMos?.completed_sp,
+        },
+      )
       setStore({ snapshot: data, error: null, loading: false })
       setJiraTimezone(data.jira_timezone)
       if (data.last_sync !== current.lastSync) {
