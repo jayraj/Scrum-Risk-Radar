@@ -32,6 +32,7 @@ export default function DashboardHome({ onSelectDetail }: DashboardHomeProps) {
               ? upcomingSprints.map((p) => `${p.project_key}: ${p.issue_count ?? 0}`).join('  ·  ')
               : '—'}
           </span>
+          <span>🕑 TZ: {snapshot?.jira_timezone ?? '—'}</span>
         </div>
       )}
       <RiskRadar onSelectDetail={onSelectDetail} />

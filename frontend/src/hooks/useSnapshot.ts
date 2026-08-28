@@ -61,6 +61,22 @@ const doFetch = (): Promise<void> => {
         '| upcoming',
         (data.next_sprint_overview?.projects ?? []).map((p) => ({ project: p.project_key, count: p.issue_count ?? 0 })),
       )
+      // DEBUG: jira_timezone + per-sprint active risk breakdown (severity is tz-dependent)
+      console.log(
+        '[debug] jira_timezone =',
+        data.jira_timezone,
+        '| active risks',
+        (data.blockers ?? [])
+          .filter((b) => (b.sprint_key ?? '').includes('MOS'))
+          .map((b) => ({
+            sprint: b.sprint_key,
+            type: b.type,
+            sev: b.severity,
+            days_overdue: b.days_overdue ?? (b.overdue_issues ? b.overdue_issues.length : undefined),
+            stalled: b.stalled_issues ? b.stalled_issues.length : undefined,
+            hours_since_update: b.hours_since_update,
+          })),
+      )
       setStore({ snapshot: data, error: null, loading: false })
       setJiraTimezone(data.jira_timezone)
       if (data.last_sync !== current.lastSync) {
