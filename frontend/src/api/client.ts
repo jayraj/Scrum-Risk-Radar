@@ -160,6 +160,7 @@ export interface SprintOverviewProject {
   in_progress_sp: number
   remaining_sp: number
   completion_percent: number
+  issue_count?: number
 }
 
 export interface SprintOverviewResponse {
@@ -167,6 +168,7 @@ export interface SprintOverviewResponse {
   total_sp: number
   completed_sp: number
   in_progress_sp: number
+  total_issue_count?: number
 }
 
 export interface VelocitySprint {

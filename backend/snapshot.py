@@ -131,7 +131,7 @@ def _build_radar_data(sprint_data, risks):
 
 
 def _build_sprint_overview(sprint_data):
-    overview = {"projects": [], "total_sp": 0, "completed_sp": 0, "in_progress_sp": 0}
+    overview = {"projects": [], "total_sp": 0, "completed_sp": 0, "in_progress_sp": 0, "total_issue_count": 0}
 
     for project_key, data in sprint_data.items():
         sprint = data.get("sprint")
@@ -161,11 +161,13 @@ def _build_sprint_overview(sprint_data):
             "in_progress_sp": in_progress_sp,
             "remaining_sp": total_sp - completed_sp,
             "completion_percent": int((completed_sp / total_sp * 100) if total_sp > 0 else 0),
+            "issue_count": len(issues),
         })
 
         overview["total_sp"] += total_sp
         overview["completed_sp"] += completed_sp
         overview["in_progress_sp"] += in_progress_sp
+        overview["total_issue_count"] += len(issues)
 
     return overview
 

@@ -54,6 +54,10 @@ const doFetch = (): Promise<void> => {
   const promise = (async () => {
     try {
       const data = await apiSnapshot()
+      // DEBUG: active-sprint work-item counts (remove after 0-vs-4 investigation)
+      console.log('[debug] work items', (data.sprint_overview?.projects ?? []).map(
+        (p) => ({ project: p.project_key, count: p.issue_count ?? 0 })
+      ))
       setStore({ snapshot: data, error: null, loading: false })
       setJiraTimezone(data.jira_timezone)
       if (data.last_sync !== current.lastSync) {
@@ -118,5 +122,18 @@ export function useSnapshot(syncIntervalSeconds: number, refreshKey = 0): Snapsh
     startPolling(slug, syncIntervalSeconds)
   }, [slug, syncIntervalSeconds, refreshKey])
 
+  return useSyncExternalStore(subscribe, getSnapshot)
+}
+
+// Read-only subscription: mirrors the store without starting/resetting polling.
+// Used by debug-only UI that only needs the latest snapshot value.
+export function useSnapshotValue(): Snapshot | null {
+  const subscribe = useCallback((callback: () => void) => {
+    listeners.add(callback)
+    return () => {
+      listeners.delete(callback)
+    }
+  }, [])
+  const getSnapshot = useCallback(() => current.snapshot, [])
   return useSyncExternalStore(subscribe, getSnapshot)
 }
