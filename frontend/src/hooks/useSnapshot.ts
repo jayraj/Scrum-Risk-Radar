@@ -54,10 +54,13 @@ const doFetch = (): Promise<void> => {
   const promise = (async () => {
     try {
       const data = await apiSnapshot()
-      // DEBUG: active-sprint work-item counts (remove after 0-vs-4 investigation)
-      console.log('[debug] work items', (data.sprint_overview?.projects ?? []).map(
-        (p) => ({ project: p.project_key, count: p.issue_count ?? 0 })
-      ))
+      // DEBUG: current + upcoming work-item counts (remove after investigation)
+      console.log(
+        '[debug] work items — current',
+        (data.radar_data ?? []).map((r) => ({ sprint: r.sprint_key, count: r.issue_count ?? 0 })),
+        '| upcoming',
+        (data.next_sprint_overview?.projects ?? []).map((p) => ({ project: p.project_key, count: p.issue_count ?? 0 })),
+      )
       setStore({ snapshot: data, error: null, loading: false })
       setJiraTimezone(data.jira_timezone)
       if (data.last_sync !== current.lastSync) {
