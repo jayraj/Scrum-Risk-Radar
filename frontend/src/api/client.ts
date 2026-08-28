@@ -93,7 +93,6 @@ export interface Blocker {
   qa_stories_count?: number
   stalled_issues?: { key: string; summary?: string; assignee?: string; hours_since_update: number }[]
   overdue_issues?: { key: string; summary?: string; days_overdue: number }[]
-  days_overdue?: number
 }
 
 export interface Mitigation {

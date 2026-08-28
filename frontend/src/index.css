@@ -1252,19 +1252,6 @@ body {
 }
 
 /* DEBUG-only: active-sprint work-item count (remove after 0-vs-4 investigation) */
-.debug-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--color-neutral-100);
-  color: var(--color-neutral-700);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-color);
-}
-
 .risk-chip.critical {
   background: rgba(220, 38, 38, 0.1);
   color: #ef4444;
