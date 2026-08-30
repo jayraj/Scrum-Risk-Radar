@@ -228,7 +228,7 @@ def _refresh_snapshot(row: dict, config: UserConfig):
     prev_snapshot = row.get("snapshot") or {}
     scope_meta = prev_snapshot.get("scope_meta") or {"baselines": {}, "history": {}}
 
-    risk_engine = RiskEngine()
+    risk_engine = RiskEngine(jira_timezone=jira_timezone)
 
     # Append today's burndown gaps (capped history) before risk calc so the
     # trend factor sees the latest check-in.

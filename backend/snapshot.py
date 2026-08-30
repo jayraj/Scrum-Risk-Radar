@@ -8,7 +8,7 @@ the whole dashboard from a single cached snapshot.
 
 from datetime import datetime, timedelta
 
-from risk_components import is_done, to_utc
+from risk_components import is_done, to_utc, working_days_between
 from risk_engine import RiskEngine
 
 SPRINT_LEVEL_RISK_TYPES = ["BURNDOWN_BEHIND", "QA_BOTTLENECK", "BUG_RAISED", "SCOPE_CREEP", "SPRINT_ENDED_INCOMPLETE", "SPRINT_NOT_STARTED"]
@@ -207,7 +207,7 @@ def _build_next_sprint_overview(next_sprint_data, risk_engine):
     return overview
 
 
-def _build_delivery_health(sprint_data, next_sprint_data, velocity_data, risks, risk_engine):
+def _build_delivery_health(sprint_data, next_sprint_data, velocity_data, risks, risk_engine, jira_timezone=None):
     def _avg_velocity(project_key):
         sprints = velocity_data.get(project_key, [])
         if not sprints:
@@ -217,9 +217,9 @@ def _build_delivery_health(sprint_data, next_sprint_data, velocity_data, risks, 
 
     def _sprint_duration_days(sprint):
         try:
-            start = datetime.fromisoformat(sprint["startDate"].replace("Z", "+00:00")).replace(tzinfo=None)
-            end = datetime.fromisoformat(sprint["endDate"].replace("Z", "+00:00")).replace(tzinfo=None)
-            return max((end - start).days, 1)
+            # Working days only — the forecast burns capacity Monday–Friday,
+            # so a weekend in the window shouldn't stretch the timeline.
+            return max(working_days_between(sprint.get("startDate"), sprint.get("endDate"), jira_timezone), 1)
         except Exception:
             return 14
 
@@ -352,7 +352,7 @@ def build_snapshot(sprint_data, next_sprint_data, velocity_data, risks, burndown
         "sprint_overview": _build_sprint_overview(sprint_data),
         "next_sprint_overview": _build_next_sprint_overview(next_sprint_data, risk_engine),
         "velocity": velocity_data,
-        "delivery_health": _build_delivery_health(sprint_data, next_sprint_data, velocity_data, risks, risk_engine),
+        "delivery_health": _build_delivery_health(sprint_data, next_sprint_data, velocity_data, risks, risk_engine, jira_timezone),
         "risks": risks,
         "total_risks": len(risks),
         "summary": risk_engine.generate_risk_summary(risks),

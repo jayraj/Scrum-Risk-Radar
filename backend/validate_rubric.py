@@ -6,8 +6,10 @@ scores are asserted with a small tolerance (scores are rounded ints).
 """
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
+import risk_components
+import risk_engine
 from config import settings as _settings
 from risk_components import (
     STALE_HOURS,
@@ -19,13 +21,28 @@ from risk_engine import RiskEngine
 
 eng = RiskEngine()
 
+# Fixed reference "now" (2026-08-26 = Wednesday). A Wednesday keeps the small
+# synthetic sprint windows on a clean weekday layout (deterministic working-day
+# fractions), and it also falls AFTER 2026-08-24 so the timezone-overdue
+# regression checks below still see both test sprints as genuinely overdue.
+_NOW = datetime(2026, 8, 26, 9, 0, 0, tzinfo=timezone.utc)
+
+# Freeze the engine's internal clock on that reference so every day fraction
+# (burndown elapsed, bug age, time pressure) is computed against it instead of
+# the real wall clock. Both modules' now_utc bindings must be patched since
+# each reads the name from its own module globals.
+risk_engine.now_utc = lambda: _NOW.astimezone(timezone.utc)
+risk_components.now_utc = lambda: _NOW.astimezone(timezone.utc)
+
 
 def settings_scope_cap():
     return _settings.scope_creep_cap
 
 
 def _iso(days_from_now):
-    return (datetime.utcnow() + timedelta(days=days_from_now)).isoformat() + "Z"
+    # Naive timestamp + "Z", matching the original helper so to_utc() (which
+    # expects either a bare offset or a trailing Z, not both) parses cleanly.
+    return (_NOW.replace(tzinfo=None) + timedelta(days=days_from_now)).isoformat() + "Z"
 
 
 def _sprint(days_elapsed, duration, name="Sprint X"):
@@ -108,7 +125,7 @@ def run():
     # base=min(70,15)=15 -> 15*1.1*1.0*1.3 = 21.45 -> 21 LOW-MEDIUM
     sprint_d = _sprint(1, 5)
     issues_d = [
-        _issue("PFIN-10", "Code Review", 5, 6, due=(datetime.utcnow() - timedelta(days=1)).date().isoformat()),
+        _issue("PFIN-10", "Code Review", 5, 6, due=(_NOW - timedelta(days=1)).date().isoformat()),
         _issue("PFIN-11", "To Do", 5, 6, blocked_by="PFIN-10"),
     ]
     ctx_d = {"avg_sp": avg_sprint_sp(issues_d), "blocking_map": is_blocking_map(issues_d)}
@@ -119,7 +136,7 @@ def run():
     # Counter-example: 4 days overdue, QA (1.3), blocks 2 (1.3)
     # base=min(70,60)=60 -> 60*1.3*1.0*1.3 = 101.4 -> 100 HIGH
     issues_d2 = [
-        _issue("PFIN-10", "In QA Review", 5, 6, due=(datetime.utcnow() - timedelta(days=4)).date().isoformat()),
+        _issue("PFIN-10", "In QA Review", 5, 6, due=(_NOW - timedelta(days=4)).date().isoformat()),
         _issue("PFIN-11", "To Do", 5, 6, blocked_by="PFIN-10"),
         _issue("PFIN-12", "To Do", 5, 6, blocked_by="PFIN-10"),
     ]
@@ -133,9 +150,11 @@ def run():
     # ------------------------------------------------------------------ #
     print("\nBUG_RAISED")
     # Band model: tier derived from priority; score interpolates within the
-    # tier band by age across the sprint length. sprint_b is 10 days long.
+    # tier band by age across the sprint length. sprint_b spans 7 working days
+    # (Sat Aug 8 -> Tue Aug 18, one weekend skipped); the benchmark is computed
+    # on working-day sprint length so the ratio matches the real pacing.
     sprint_b = _sprint(days_elapsed=4, duration=10)
-    # P2 (High), 4/10 days old -> 30 + (50-30)*0.4 = 38 MEDIUM
+    # P2 (High), 4 calendar days old / 7 workday sprint -> 30 + (50-30)*0.57 = 41 MEDIUM
     issues_b = [
         _issue("PFIN-50", "In QA Review", 2, 2, priority="High", issue_type="Bug",
                created_days_ago=4),
@@ -143,7 +162,7 @@ def run():
     ]
     risks_b = eng.detect_bug_risks(sprint_b, issues_b)
     r = _first(risks_b, "BUG_RAISED")
-    results.append(check("P2 mid-age in band", r["risk_score"], 38))
+    results.append(check("P2 mid-age in band", r["risk_score"], 41))
     results.append(check("P2 severity MEDIUM", 1 if r["severity"] == "MEDIUM" else 0, 1, tol=0))
 
     # Counter: P4 (Low), fresh today -> band low 10 LOW
@@ -173,14 +192,14 @@ def run():
     results.append(check("P1 open at band low", r["risk_score"], 80))
     results.append(check("P1 open severity CRITICAL", 1 if r["severity"] == "CRITICAL" else 0, 1, tol=0))
 
-    # P1 fixed before sprint end (Done) -> P1_fixed: 60 + (70-60)*0.4 = 64 HIGH
+    # P1 fixed before sprint end (Done) -> P1_fixed: 60 + (70-60)*0.57 = 66 HIGH
     issues_b5 = [
         _issue("PFIN-54", "Done", 2, 2, priority="Highest", issue_type="Bug",
                created_days_ago=4),
     ]
     risks_b5 = eng.detect_bug_risks(sprint_b, issues_b5)
     r = risks_b5[0]
-    results.append(check("P1 fixed in band", r["risk_score"], 64))
+    results.append(check("P1 fixed in band", r["risk_score"], 66))
     results.append(check("P1 fixed severity HIGH", 1 if r["severity"] == "HIGH" else 0, 1, tol=0))
 
     # Fixed lower-tier defects are normal quality variation -> skipped
@@ -213,8 +232,9 @@ def run():
     # QA_BOTTLENECK
     # ------------------------------------------------------------------ #
     print("\nQA_BOTTLENECK")
-    # Example: 2 in QA, throughput 1/day -> backlog 2; 3 days remain (day2/5, mult 0.8)
-    # base=min(70, 200/3)=67 -> 67*0.8 = 53.6 -> 54 MEDIUM
+    # Example: 2 in QA, throughput 1/day -> backlog 2; 3 working days remain
+    # (day 3/5 elapsed on working days, mult 0.8). base=min(70, 200/3)=67 ->
+    # 67*0.8 = 53 MEDIUM.
     sprint_q = _sprint(days_elapsed=2, duration=5)
     issues_q = [
         _issue("Q-1", "In QA Review", 3, 30),
@@ -223,14 +243,15 @@ def run():
     ctx_q = {"qa_throughput": 1.0}
     risks_q = eng.detect_qa_bottleneck(sprint_q, issues_q, ctx_q)
     r = risks_q[0]
-    results.append(check("Example: 2 QA, throughput 1/day, 3 days left", r["risk_score"], 54))
+    results.append(check("Example: 2 QA, throughput 1/day, 3 days left", r["risk_score"], 53))
     results.append(check("Example severity MEDIUM", 1 if r["severity"] == "MEDIUM" else 0, 1, tol=0))
 
-    # Counter: 2 QA, 1 day remains (mult 1.7) -> base=70 -> 119 -> 100 HIGH
+    # Counter: 2 QA, 1 working day remains. Working-day pacing puts this at
+    # 75% elapsed (mult 1.1) today -> base 70 -> 77 HIGH.
     sprint_q2 = _sprint(days_elapsed=4, duration=5)
     risks_q2 = eng.detect_qa_bottleneck(sprint_q2, issues_q, ctx_q)
     r = risks_q2[0]
-    results.append(check("Counter: 2 QA, 1 day left", r["risk_score"], 100))
+    results.append(check("Counter: 2 QA, 1 day left", r["risk_score"], 77))
 
     # Board-naming robustness: "QA Review" (without "In") matches too
     issues_q3 = [
@@ -240,7 +261,7 @@ def run():
     risks_q3 = eng.detect_qa_bottleneck(sprint_q, issues_q3, ctx_q)
     results.append(check("'QA Review' variant detected", 1 if risks_q3 else 0, 1, tol=0))
     if risks_q3:
-        results.append(check("'QA Review' variant same score", risks_q3[0]["risk_score"], 54))
+        results.append(check("'QA Review' variant same score", risks_q3[0]["risk_score"], 53))
 
     # ------------------------------------------------------------------ #
     # EXTERNAL_DEPENDENCY
