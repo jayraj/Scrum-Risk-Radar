@@ -6,14 +6,22 @@ sprint-to-sprint and ticket-to-ticket ranking/triage).
 """
 import logging
 from datetime import date, timezone
+from zoneinfo import ZoneInfo
 
 from config import settings
-from risk_components import (
-    resolve_tz as _resolve_tz,
-    working_days_between,
-    working_days_elapsed,
-    working_days_remaining,
-)
+
+
+def _resolve_tz(jira_timezone: str | None):
+    """Return a tzinfo from an IANA timezone name (the Jira user's timezone),
+    falling back to UTC when none is provided or unparseable. This keeps the
+    backend's calendar-day math aligned with what Jira displays regardless of
+    where the server runs (e.g. Vercel = UTC)."""
+    if jira_timezone:
+        try:
+            return ZoneInfo(jira_timezone)
+        except Exception:  # noqa: BLE001 - unknown tz string
+            pass
+    return timezone.utc
 from risk_components import (
     STALE_HOURS,
     assignee_factor,
@@ -49,12 +57,6 @@ DEPENDENCY_BASE = {
 
 class RiskEngine:
 
-    def __init__(self, jira_timezone: str | None = None):
-        # Working-day math (weekends excluded) resolves dates in the Jira
-        # timezone; None skips to UTC. Set by calculate_all_risks (or main.py)
-        # so even direct get_burndown_gap() calls use the right zone.
-        self.jira_timezone = jira_timezone
-
     # ------------------------------------------------------------------ #
     # Orchestrator
     # ------------------------------------------------------------------ #
@@ -64,9 +66,6 @@ class RiskEngine:
         scope_meta = scope_meta or {}
         baselines = scope_meta.get("baselines") or {}
         scope_history = scope_meta.get("history") or {}
-        # The Jira timezone drives all working-day math below, so day counts
-        # and time-pressure match the board the user sees in Jira.
-        self.jira_timezone = jira_timezone
 
         for project_key, data in sprint_data.items():
             sprint = data["sprint"]
@@ -181,7 +180,7 @@ class RiskEngine:
         if not start or not end or now < start or now > end:
             return []  # only judge sprints that are currently active
 
-        days_elapsed = working_days_elapsed(sprint, now=now, tz=self.jira_timezone)
+        days_elapsed = (now - start).days
         if days_elapsed < settings.no_progress_grace_days:
             return []
 
@@ -198,7 +197,7 @@ class RiskEngine:
             return []  # at least one ticket has moved out of the start column
 
         base = min(settings.no_progress_cap, days_elapsed * settings.no_progress_per_day)
-        tp = time_pressure_multiplier(sprint, tz=self.jira_timezone)
+        tp = time_pressure_multiplier(sprint)
         raw = base * tp
         score = cap_score(raw)
 
@@ -251,18 +250,14 @@ class RiskEngine:
             return None
 
         start_date = to_utc(sprint.get("startDate"))
+        end_date = to_utc(sprint.get("endDate"))
         now = now_utc()
-        if not start_date or not sprint.get("endDate"):
+        if not start_date or not end_date:
             return None
 
-        # Sprint pacing runs on working days (Mon–Fri): a weekend adds no
-        # capacity, so elapsed/time-left/the expected rate stay honest even
-        # when a check-in lands on Saturday.
-        sprint_duration = working_days_between(
-            sprint.get("startDate"), sprint.get("endDate"), self.jira_timezone
-        )
-        days_elapsed = working_days_elapsed(sprint, now=now, tz=self.jira_timezone)
-        days_left = working_days_remaining(sprint, now=now, tz=self.jira_timezone)
+        sprint_duration = (end_date - start_date).days
+        days_elapsed = (now - start_date).days
+        days_left = (end_date - now).days
 
         if days_elapsed <= 0 or sprint_duration <= 0:
             return None
@@ -313,7 +308,7 @@ class RiskEngine:
         # v2: trend + time pressure composition
         base_severity = min(settings.burndown_gap_cap, burndown_gap)
         tf = trend_factor(context.get("burndown_history") or [])
-        tp = time_pressure_multiplier(sprint, tz=self.jira_timezone)
+        tp = time_pressure_multiplier(sprint)
         raw = base_severity * tf * tp
         score = cap_score(raw)
 
@@ -365,9 +360,9 @@ class RiskEngine:
         throughput = context.get("qa_throughput", settings.qa_throughput_default) or settings.qa_throughput_default
         qa_queue_count = len(qa_stories)
         backlog_clear_days = qa_queue_count / throughput if throughput > 0 else qa_queue_count
-        days_left = days_remaining(sprint, tz=self.jira_timezone)
+        days_left = days_remaining(sprint)
         base = min(settings.qa_backlog_cap, (backlog_clear_days / days_left) * 100)
-        tp = time_pressure_multiplier(sprint, tz=self.jira_timezone)
+        tp = time_pressure_multiplier(sprint)
         raw = base * tp
         score = cap_score(raw)
 
@@ -530,12 +525,7 @@ class RiskEngine:
         now = now_utc()
         sprint_days = None
         if sprint_start and sprint_end and sprint_end > sprint_start:
-            sprint_days = max(
-                1,
-                working_days_between(
-                    sprint.get("startDate"), sprint.get("endDate"), self.jira_timezone
-                ),
-            )
+            sprint_days = max(1.0, (sprint_end - sprint_start).total_seconds() / 86400)
 
         for issue in issues:
             itype = (issue.get("issue_type") or "").strip().lower()
@@ -676,7 +666,7 @@ class RiskEngine:
         # Pure additions/hikes with sub-threshold net growth still count as
         # at least a threshold-level signal.
         base = max(growth, min_growth) if (added or hiked) else growth
-        tp = time_pressure_multiplier(sprint, tz=self.jira_timezone)
+        tp = time_pressure_multiplier(sprint)
         raw = min(settings.scope_creep_cap, base) * tp
         # Unplanned work absorbed mid-sprint is always a red flag, even +1 SP:
         # floor the displayed score so severity lands in CRITICAL.

@@ -116,19 +116,6 @@ export const shortSprintName = (name?: string): string => {
   return match ? 'S' + match[1] : name.slice(0, 6)
 }
 
-/** Count Mon–Fri working days between two UTC-midnight timestamps (inclusive).
- * Sprint windows are short (≤ ~6 weeks), so a day step is plenty fast and
- * avoids weekday arithmetic edge cases. */
-const countWorkingDays = (startMs: number, endMs: number): number => {
-  const DAY_MS = 86400000
-  let working = 0
-  for (let t = startMs; t <= endMs; t += DAY_MS) {
-    const weekday = new Date(t).getUTCDay()
-    if (weekday !== 0 && weekday !== 6) working += 1
-  }
-  return working
-}
-
 export const sprintDayLabel = (
   startDate?: string,
   endDate?: string,
@@ -166,16 +153,13 @@ export const sprintDayLabel = (
   const today = toTzMidnight(new Date().toISOString())
   if (today === null) return null
 
-  // Inclusive working-day (Mon–Fri) span — weekends don't count toward the
-  // sprint's day budget or its elapsed counter.
-  const totalDays = Math.max(countWorkingDays(start, end), 1)
+  // Inclusive calendar-day span.
+  const totalDays = Math.max(Math.floor((end - start) / DAY_MS) + 1, 1)
   if (today > end) {
-    // Overdue stays calendar-based: it measures wall-clock lateness past the
-    // end date, so a sprint ending Friday is 2 days overdue by Sunday.
     const daysOverdue = Math.max(1, Math.round((today - end) / DAY_MS))
     return `Overdue by ${daysOverdue} day${daysOverdue === 1 ? '' : 's'}`
   }
-  const elapsed = countWorkingDays(start, Math.min(today, end))
+  const elapsed = Math.floor((today - start) / DAY_MS) + 1
   const day = Math.max(1, Math.min(elapsed, totalDays))
   return `Day ${day}/${totalDays}`
 }

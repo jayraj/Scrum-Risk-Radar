@@ -1,11 +1,12 @@
 import logging
 import re
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 
 import requests
 
 from config import UserConfig, settings
-from risk_components import is_done, is_qa_status, working_days_between
+from risk_components import is_done, is_qa_status
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -244,7 +245,7 @@ class JiraFetcher:
                     "sprint_key": sprint.get("name"),
                     "start_date": sprint.get("startDate"),
                     "end_date": sprint.get("endDate"),
-                    "duration_days": self._sprint_duration_days(sprint, self.get_timezone()),
+                    "duration_days": self._sprint_duration_days(sprint),
                     "completed_sp": completed_sp,
                     "total_sp": total_sp,
                     "completed_percent": int((completed_sp / total_sp * 100) if total_sp > 0 else 0),
@@ -277,12 +278,11 @@ class JiraFetcher:
             return []
 
     @staticmethod
-    def _sprint_duration_days(sprint, tz=None):
-        """Working days (Mon–Fri) in the sprint's window, resolved in the Jira
-        timezone — weekends don't add throughput capacity, so velocity and QA
-        throughput-per-day are measured on the days people actually work."""
+    def _sprint_duration_days(sprint):
         try:
-            return max(working_days_between(sprint.get("startDate"), sprint.get("endDate"), tz), 1)
+            start = datetime.fromisoformat(sprint["startDate"].replace("Z", "+00:00")).replace(tzinfo=None)
+            end = datetime.fromisoformat(sprint["endDate"].replace("Z", "+00:00")).replace(tzinfo=None)
+            return max((end - start).days, 1)
         except Exception:
             return 14
 

@@ -4,8 +4,7 @@ Every risk-type rule calls into the same three tables (time pressure, workflow
 stage, size weight) plus the per-sprint context helpers, so the model stays
 consistent and tunable from config.
 """
-from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
+from datetime import datetime, timezone
 
 from config import settings
 
@@ -43,96 +42,45 @@ def now_utc():
     return datetime.now(timezone.utc)
 
 
-def resolve_tz(jira_timezone: str | None):
-    """Tzinfo from an IANA timezone name (the Jira user's profile timezone),
-    falling back to UTC. Mirrors risk_engine._resolve_tz so calendar-day math
-    stays aligned with the Jira UI regardless of where the server runs."""
-    if jira_timezone:
-        try:
-            return ZoneInfo(jira_timezone)
-        except Exception:  # noqa: BLE001 - unknown tz string
-            return timezone.utc
-    return timezone.utc
-
-
-def working_days_between(start_iso, end_iso, tz=None):
-    """Number of Mon–Fri working days in [start_date, end_date], inclusive.
-
-    Both instants are resolved to their calendar date in the Jira timezone
-    (defaults to UTC), so weekend boundaries match the board the user sees.
-    Returns 0 when start falls after end or either side is unparseable.
-    """
-    start = to_utc(start_iso)
-    end = to_utc(end_iso)
-    if not start or not end:
-        return 0
-    tz = resolve_tz(tz)
-    s = start.astimezone(tz).date()
-    e = end.astimezone(tz).date()
-    if e < s:
-        return 0
-    working = 0
-    d = s
-    while d <= e:
-        if d.weekday() < 5:
-            working += 1
-        d += timedelta(days=1)
-    return working
-
-
-def working_days_elapsed(sprint, now=None, tz=None):
-    """Working days completed since the sprint started (excludes the start day),
-    mirroring the old `(now - start).days` convention so time-pressure and
-    remaining-day proportions are preserved when weekends are skipped."""
-    if not sprint or not sprint.get("startDate"):
-        return 0
-    now = now or now_utc()
-    tzinfo = resolve_tz(tz)
-    start = to_utc(sprint.get("startDate"))
-    if not start:
-        return 0
-    inclusive = working_days_between(sprint.get("startDate"), now.isoformat(), tz)
-    if start.astimezone(tzinfo).date().weekday() < 5:
-        inclusive -= 1
-    return max(inclusive, 0)
-
-
-def pct_sprint_elapsed(sprint, now=None, tz=None):
-    """Fraction of the sprint elapsed on working days (Mon–Fri). Returns 0.0-1.0+."""
+def pct_sprint_elapsed(sprint, now=None):
+    """Fraction of the sprint elapsed (calendar days). Returns 0.0-1.0+."""
     if not sprint or not sprint.get("startDate") or not sprint.get("endDate"):
         return 1.0
-    duration = working_days_between(sprint.get("startDate"), sprint.get("endDate"), tz)
-    elapsed = working_days_elapsed(sprint, now=now, tz=tz)
+    start = to_utc(sprint.get("startDate"))
+    end = to_utc(sprint.get("endDate"))
+    now = now or now_utc()
+    if not start or not end:
+        return 1.0
+    duration = (end - start).days
+    elapsed = (now - start).days
     if duration <= 0:
         return 1.0
     return max(0.0, elapsed / duration)
 
 
-def working_days_remaining(sprint, now=None, tz=None):
-    """Working days until the sprint ends (min 1).
+def days_remaining(sprint, now=None):
+    """Calendar days until the sprint ends (min 1).
 
     Uses `duration - elapsed` (rubric convention) rather than `(end - now).days`
-    so a day-2-of-5 sprint reports 3 remaining working days regardless of
-    time-of-day (the day of week the check-in lands on doesn't change it).
+    so a day-2-of-5 sprint reports 3 remaining days regardless of time-of-day.
     """
     if not sprint or not sprint.get("startDate") or not sprint.get("endDate"):
         return 1
-    duration = working_days_between(sprint.get("startDate"), sprint.get("endDate"), tz)
-    elapsed = working_days_elapsed(sprint, now=now, tz=tz)
+    start = to_utc(sprint.get("startDate"))
+    end = to_utc(sprint.get("endDate"))
+    now = now or now_utc()
+    if not start or not end:
+        return 1
+    duration = (end - start).days
+    elapsed = (now - start).days
     if duration <= 0:
         return 1
     return max(duration - elapsed, 1)
 
 
-def days_remaining(sprint, now=None, tz=None):
-    """Alias for working_days_remaining — kept for callers that read the name
-    generically. Sprint pacing is measured on working days, not calendar ones."""
-    return working_days_remaining(sprint, now=now, tz=tz)
-
-
-def time_pressure_multiplier(sprint, now=None, tz=None):
+def time_pressure_multiplier(sprint, now=None):
     """Risk of the same magnitude is worse the closer the sprint is to ending."""
-    pct = pct_sprint_elapsed(sprint, now=now, tz=tz)
+    pct = pct_sprint_elapsed(sprint, now=now)
     for threshold, multiplier in settings.time_pressure_table:
         if pct <= threshold:
             return multiplier
