@@ -1,6 +1,7 @@
 interface WorkItem {
   key?: string
   summary?: string
+  status?: string
   assignee?: string
   story_points?: number
 }
@@ -19,6 +20,7 @@ export default function WorkItemTable({ items }: { items: WorkItem[] }) {
       <div className="work-item-row work-item-head">
         <span className="work-item-cell">Ticket #</span>
         <span className="work-item-cell">Summary</span>
+        <span className="work-item-cell">Status</span>
         <span className="work-item-cell">Story points</span>
         <span className="work-item-cell">Assignee</span>
       </div>
@@ -26,6 +28,7 @@ export default function WorkItemTable({ items }: { items: WorkItem[] }) {
         <div className="work-item-row" key={it.key || i}>
           <span className="work-item-cell work-item-key">{it.key}</span>
           <span className="work-item-cell work-item-summary">{it.summary}</span>
+          <span className="work-item-cell work-item-status">{it.status || '—'}</span>
           <span className="work-item-cell work-item-sp">{it.story_points ?? '—'}</span>
           <span className="work-item-cell work-item-assignee">{it.assignee ? initials(it.assignee) : '—'}</span>
         </div>

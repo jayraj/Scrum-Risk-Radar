@@ -2259,7 +2259,7 @@ body {
 
 .work-item-row {
   display: grid;
-  grid-template-columns: 120px minmax(0, 1fr) 90px 140px;
+  grid-template-columns: 120px minmax(0, 1fr) 110px 90px 140px;
   gap: 12px;
   align-items: center;
   padding: 10px 16px;
@@ -2299,6 +2299,10 @@ body {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   color: var(--color-secondary-600);
+}
+
+.work-item-status {
+  color: var(--color-secondary-700);
 }
 
 .work-item-assignee {
