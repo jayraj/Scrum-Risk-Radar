@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Layers, Zap, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react'
-import { sprintDayLabel, severityFromScore } from '../utils/format'
+import { sprintDayLabel, severityFromScore, getRiskColor } from '../utils/format'
 import SprintGauge from './SprintGauge'
 import type { Blocker } from '../api/client'
 
@@ -20,6 +20,7 @@ export interface SprintCardData {
   completed_sp?: number | null
   start_date?: string
   end_date?: string
+  at_risk_count?: number
 }
 
 interface SprintCardProps {
@@ -28,14 +29,24 @@ interface SprintCardProps {
   eyebrow?: string
   detailsTo?: string
   onDetails?: () => void
+  progressMode?: 'points' | 'atRisk'
 }
 
-export default function SprintCard({ data, blockers = [], eyebrow = 'ACTIVE SPRINT', detailsTo, onDetails }: SprintCardProps) {
+export default function SprintCard({ data, blockers = [], eyebrow = 'ACTIVE SPRINT', detailsTo, onDetails, progressMode = 'points' }: SprintCardProps) {
   const dayLabel = sprintDayLabel(data.start_date, data.end_date)
   const score = data.risk_score ?? 0
   const totalSp = data.total_sp ?? 0
   const completedSp = data.completed_sp ?? 0
-  const progressPct = totalSp > 0 ? Math.round((completedSp / totalSp) * 100) : 0
+  const pointsPct = totalSp > 0 ? Math.round((completedSp / totalSp) * 100) : 0
+
+  const isAtRisk = progressMode === 'atRisk'
+  const totalIssues = data.issue_count ?? 0
+  const atRiskCount = data.at_risk_count ?? 0
+  const readiness = isAtRisk ? Math.max(totalIssues - atRiskCount, 0) : completedSp
+  const healthPct =
+    isAtRisk && totalIssues > 0 ? Math.round((readiness / totalIssues) * 100) : pointsPct
+  const progressPct = isAtRisk ? healthPct : pointsPct
+  const fillColor = isAtRisk ? getRiskColor(100 - healthPct) : null
 
   const sevOf = (b: Blocker) => severityFromScore(b.risk_score) || b.severity || 'MEDIUM'
   const counts = {
@@ -45,6 +56,7 @@ export default function SprintCard({ data, blockers = [], eyebrow = 'ACTIVE SPRI
     LOW: blockers.filter((b) => sevOf(b) === 'LOW').length,
   }
   const totalRisks = counts.CRITICAL + counts.HIGH + counts.MEDIUM + counts.LOW
+  const riskCount = isAtRisk ? atRiskCount : totalRisks
 
   const [shown, setShown] = useState(false)
   useEffect(() => {
@@ -81,18 +93,35 @@ export default function SprintCard({ data, blockers = [], eyebrow = 'ACTIVE SPRI
       </div>
 
       <div className="sprint-card-progress">
-        <span className="sprint-card-progress-label">Progress</span>
-        <span className="sprint-card-progress-pts">{completedSp} pt / {totalSp} pt</span>
+        <span className="sprint-card-progress-label">{isAtRisk ? 'Readiness' : 'Progress'}</span>
+        <span className="sprint-card-progress-pts">
+          {isAtRisk ? `${readiness} / ${totalIssues} items` : `${completedSp} pt / ${totalSp} pt`}
+        </span>
         <div className="sprint-card-progress-track">
-          <div className="sprint-card-progress-fill" style={{ width: shown ? `${progressPct}%` : '0%' }} />
+          <div
+            className="sprint-card-progress-fill"
+            style={{
+              width: shown ? `${progressPct}%` : '0%',
+              ...(fillColor ? { background: fillColor } : {}),
+            }}
+          />
         </div>
       </div>
 
       <div className="sprint-card-footer">
         <div className="sprint-card-status">
-          {totalRisks === 0 ? (
+          {riskCount === 0 ? (
             <span className="sprint-card-noissues">
               <CheckCircle2 size={12} /> No issues
+            </span>
+          ) : isAtRisk ? (
+            <span
+              className="sprint-card-badge"
+              style={{ background: SEVERITY_BADGE.MEDIUM.bg, color: SEVERITY_BADGE.MEDIUM.text }}
+            >
+              <AlertCircle size={11} />
+              <span className="sprint-card-badge-dot" style={{ background: SEVERITY_BADGE.MEDIUM.dot }} />
+              {atRiskCount} issues
             </span>
           ) : (
             (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((sev) =>

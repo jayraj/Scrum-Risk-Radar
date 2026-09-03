@@ -129,6 +129,7 @@ export interface NextSprintProject {
   issue_count: number
   issue_types: Record<string, number>
   risk_score?: number
+  at_risk_count?: number
 }
 
 export interface NextSprintIssue {

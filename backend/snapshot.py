@@ -190,6 +190,10 @@ def _build_next_sprint_overview(next_sprint_data, risk_engine):
         rule_risks = risk_engine.calculate_next_sprint_risks(issues)
         risk_score = risk_engine.aggregate_risk_score(rule_risks)
 
+        at_risk_keys = set()
+        for r in rule_risks:
+            at_risk_keys.update(r.get("issue_keys") or [])
+
         overview["projects"].append({
             "project_key": project_key,
             "sprint_key": sprint.get("name"),
@@ -199,6 +203,7 @@ def _build_next_sprint_overview(next_sprint_data, risk_engine):
             "issue_count": len(issues),
             "issue_types": issue_types,
             "risk_score": risk_score,
+            "at_risk_count": len(at_risk_keys),
         })
 
         overview["total_sp"] += total_sp

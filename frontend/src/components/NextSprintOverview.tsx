@@ -57,6 +57,7 @@ export default function NextSprintOverview({ onSelectDetail }: NextSprintOvervie
               key={project.project_key}
               data={project}
               eyebrow="UPCOMING SPRINT"
+              progressMode="atRisk"
               detailsTo={`/future/${encodeURIComponent(project.project_key)}`}
               onDetails={onSelectDetail ? () => onSelectDetail({ kind: 'future', key: project.project_key }) : undefined}
             />
