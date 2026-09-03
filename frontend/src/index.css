@@ -2259,8 +2259,8 @@ body {
 
 .work-item-row {
   display: grid;
-  grid-template-columns: 120px minmax(0, 1fr) 110px 90px 140px;
-  gap: 12px;
+  grid-template-columns: minmax(60px, 85px) minmax(0, 1fr) minmax(80px, 100px) minmax(30px, 40px) minmax(50px, 70px);
+  gap: 8px;
   align-items: center;
   padding: 10px 16px;
   background: #ffffff;
@@ -2303,6 +2303,37 @@ body {
 
 .work-item-status {
   color: var(--color-secondary-700);
+}
+
+.status-chip {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status-chip--critical {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-chip--high {
+  background: #fed7aa;
+  color: #92400e;
+}
+
+.status-chip--medium {
+  background: #fef3c7;
+  color: #854d0e;
+}
+
+.status-chip--low {
+  background: #d1fae5;
+  color: #065f46;
 }
 
 .work-item-assignee {

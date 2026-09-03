@@ -26,6 +26,7 @@ import {
   describeAiFallback,
   formatDate,
   formatRiskType,
+  severityFromScore,
   splitItems,
   sprintDayLabel,
 } from '../utils/format'
@@ -82,6 +83,20 @@ export default function SprintDetailPanel({ kind, sprintKey, onClose }: SprintDe
     ? Object.values(snapshot?.sprint_data ?? {}).find((d) => d.sprint?.name === sprintKey)
     : undefined
   const workItems = isFuture ? futureIssues : (sprintDataEntry?.issues ?? [])
+
+  const sevRank: Record<string, number> = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 }
+  const riskSeverityByKey = new Map<string, string>()
+  if (!isFuture) {
+    for (const b of sprintBlockers) {
+      const keys = b.issue_keys?.length ? b.issue_keys : b.issue_key ? [b.issue_key] : []
+      const sev = b.severity ?? severityFromScore(b.risk_score)
+      for (const k of keys) {
+        if (!sev) continue
+        const cur = riskSeverityByKey.get(k)
+        if (!cur || (sevRank[sev] ?? 0) > (sevRank[cur] ?? 0)) riskSeverityByKey.set(k, sev)
+      }
+    }
+  }
 
   const projectKey = isFuture ? project?.project_key : (card as { project_key?: string } | null)?.project_key
   const start = card?.start_date
@@ -389,7 +404,7 @@ export default function SprintDetailPanel({ kind, sprintKey, onClose }: SprintDe
               <span className="detail-count">{workItems.length}</span>
               <span className="detail-pts">{totalSp} pts</span>
             </div>
-            <WorkItemTable items={workItems} />
+            <WorkItemTable items={workItems} riskSeverityByKey={riskSeverityByKey} />
           </section>
         )}
 
