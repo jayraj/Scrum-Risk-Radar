@@ -283,7 +283,7 @@ class MitigationAgent:
                 "fallback_reason": self._fallback_reason(e),
                 "llm": self.get_model_info(),
                 "action_items": [],
-                "owner": "Scrum Master (escalate if needed)",
+                "owner": self._fallback_owner(risks) or "Scrum Master",
                 "timeline": "ASAP (within 24 hours)",
                 "success_criteria": [],
                 "details": [{
@@ -305,6 +305,74 @@ class MitigationAgent:
         for r in risks[:5]:
             parts.append(f"{r.get('type')}: {r.get('recommendation', '')}")
         return " | ".join(parts)
+
+    def _fallback_owner(self, risks):
+        """Compose a Scrum-Master-coordination owner message for the rule-based
+        fallback, naming each risk's cause and the recovery lever (built from
+        the diagnostic fields already on each risk object). Merge the top two
+        risks by risk_score; assignee names are intentionally not used."""
+        if not risks:
+            return ""
+        def phrase(r):
+            rtype = r.get("type")
+            if rtype == "BURNDOWN_BEHIND":
+                gap = r.get("burndown_gap_percent")
+                sp = r.get("remaining_sp")
+                count = len(r.get("issue_keys") or [])
+                gap_txt = f"{gap:.1f}%" if gap is not None else "the gap"
+                sp_txt = f"{sp:.0f} SP" if sp is not None else "work"
+                count_txt = f"{count} open items" if count else "open items"
+                return (
+                    f"Scrum Master — burndown is {gap_txt} behind: {sp_txt} / "
+                    f"{count_txt} still incomplete. Re-plan capacity and "
+                    f"reprioritize remaining work to get back on track."
+                )
+            if rtype == "QA_BOTTLENECK":
+                n = r.get("qa_stories_count") or 0
+                stuck = len(r.get("stuck_stories") or [])
+                stuck_txt = f" ({stuck} stuck >24h)" if stuck else ""
+                return (
+                    f"Scrum Master — {n} stories are in QA review{stuck_txt}. "
+                    f"Balance QA load or add review capacity to clear the queue."
+                )
+            if rtype == "BUG_RAISED":
+                key = r.get("issue_key") or "a bug"
+                tier = r.get("tier") or ""
+                tier_txt = f" ({tier})" if tier else ""
+                return (
+                    f"Scrum Master — coordinate the fix for {key}{tier_txt} so it's "
+                    f"addressed before sprint end and doesn't break DoD."
+                )
+            if rtype == "SCOPE_CREEP":
+                growth = r.get("growth_percent")
+                growth_txt = f"{growth:.0f}%" if growth is not None else "beyond plan"
+                baseline = r.get("baseline_sp")
+                current = r.get("current_sp")
+                if baseline is not None and current is not None:
+                    delta_txt = f"{baseline:.0f} → {current:.0f} SP"
+                else:
+                    delta_txt = "plan"
+                return (
+                    f"Scrum Master — scope grew {growth_txt} vs planning "
+                    f"({delta_txt}). Renegotiate scope with stakeholders rather "
+                    f"than absorbing extra work."
+                )
+            if rtype == "SPRINT_ENDED_INCOMPLETE":
+                return (
+                    "Scrum Master — sprint ended with work incomplete. Recover "
+                    "remaining scope or close out with a clear plan."
+                )
+            if rtype == "SPRINT_NOT_STARTED":
+                return (
+                    "Scrum Master — sprint hasn't started. Resolve blockers and "
+                    "kick off to protect the sprint goal."
+                )
+            return None
+
+        ordered = sorted(risks, key=lambda r: r.get("risk_score", 0), reverse=True)
+        parts = [p for r in ordered[:2] if (p := phrase(r))]
+        return " | ".join(parts) if parts else ""
+
 
     def _risk_type_for_issue(self, risks, issue_key):
         return next(
