@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { RefreshCw } from 'lucide-react'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -26,7 +27,7 @@ interface VelocityTrendProps {
 
 export default function VelocityTrend({ velocity }: VelocityTrendProps) {
   const { syncIntervalSeconds, refreshKey } = useSync()
-  const { snapshot } = useSnapshot(syncIntervalSeconds, refreshKey)
+  const { snapshot, loading } = useSnapshot(syncIntervalSeconds, refreshKey)
   const data = velocity ?? snapshot?.velocity ?? {}
 
   // Some mobile browsers don't fire a resize after orientation change,
@@ -118,7 +119,11 @@ export default function VelocityTrend({ velocity }: VelocityTrendProps) {
         status={projectKeys.length > 0 ? { label: `avg ${overallAvg} SP`, tone: 'green' } : undefined}
       />
       <p className="component-subtitle">Throughput of completed sprints per project — use the trend to commit realistically in your next planning.</p>
-      {Object.keys(data).length === 0 ? (
+      {loading ? (
+        <div className="no-data no-data-soft loading-callout">
+          <RefreshCw size={16} className="spin" /> Loading velocity data...
+        </div>
+      ) : Object.keys(data).length === 0 ? (
         <div className="no-data no-data-soft">✅ No completed sprint data available yet.</div>
       ) : (
         <>
