@@ -1030,6 +1030,15 @@ body {
   box-shadow: var(--shadow-subtle);
 }
 
+/* Loading callout — same bordered card as no-data-soft, neutral text + spinner */
+.loading-callout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--color-secondary-600);
+}
+
 /* ---------- radar ---------- */
 .smooth-banner {
   background: linear-gradient(135deg, #d1fae5, #a7f3d0);

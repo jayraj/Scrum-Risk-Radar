@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { RefreshCw } from 'lucide-react'
 import { useSnapshot } from '../hooks/useSnapshot'
 import { useSync } from '../context/SyncContext'
 import SprintCard from './SprintCard'
@@ -49,7 +50,9 @@ export default function NextSprintOverview({ onSelectDetail }: NextSprintOvervie
       <p className="component-subtitle">A pre-planning health check — catch unassigned, unestimated, or oversized work before day one.</p>
 
       {loading ? (
-        <div className="loading">Loading upcoming sprint data...</div>
+        <div className="no-data no-data-soft loading-callout">
+          <RefreshCw size={16} className="spin" /> Loading upcoming sprint data...
+        </div>
       ) : (
         <div className="sprint-card-grid">
           {projects.map((project) => (

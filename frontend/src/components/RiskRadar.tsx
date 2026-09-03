@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { TriangleAlert } from 'lucide-react'
+import { RefreshCw, TriangleAlert } from 'lucide-react'
 import { useSnapshot } from '../hooks/useSnapshot'
 import { useSync } from '../context/SyncContext'
 import SprintCard from './SprintCard'
@@ -48,7 +48,9 @@ export default function RiskRadar({ onSelectDetail }: RiskRadarProps) {
       )}
 
       {loading ? (
-        <div className="loading">Loading active sprint data...</div>
+        <div className="no-data no-data-soft loading-callout">
+          <RefreshCw size={16} className="spin" /> Loading active sprint data...
+        </div>
       ) : (
         <>
           {radarData.length > 0 && !hasRisks && (
